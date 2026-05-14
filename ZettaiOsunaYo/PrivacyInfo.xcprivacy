@@ -18,6 +18,9 @@
     }
   ],
   "NSPrivacyTracking" : true,
-  "NSPrivacyTrackingDomains" : [],
+  "NSPrivacyTrackingDomains" : [
+    "googleads.g.doubleclick.net",
+    "pagead2.googlesyndication.com"
+  ],
   "NSPrivacyAccessedAPITypes" : []
 }
