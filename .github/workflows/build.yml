@@ -8,7 +8,7 @@ on:
 jobs:
   build:
     runs-on: macos-latest
-    timeout-minutes: 60
+    timeout-minutes: 120
 
     steps:
       - uses: actions/checkout@v6
@@ -104,6 +104,22 @@ jobs:
             -authenticationKeyPath ~/.appstoreconnect/private_keys/AuthKey_WDXGY9WX55.p8 \
             -authenticationKeyID WDXGY9WX55 \
             -authenticationKeyIssuerID 2be0734f-943a-4d61-9dc9-5d9045c46fec
+
+      - name: Upload IPA to App Store Connect
+        env:
+          ASC_KEY_ID: WDXGY9WX55
+          ASC_ISSUER_ID: 2be0734f-943a-4d61-9dc9-5d9045c46fec
+        run: |
+          IPA_PATH=$(find build/export -name "*.ipa" -print -quit)
+          if [ -z "$IPA_PATH" ]; then
+            echo "No IPA found in build/export"
+            exit 1
+          fi
+          xcrun altool --upload-app \
+            --type ios \
+            --file "$IPA_PATH" \
+            --apiKey "$ASC_KEY_ID" \
+            --apiIssuer "$ASC_ISSUER_ID"
 
       - name: Submit for Review
         env:

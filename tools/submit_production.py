@@ -56,6 +56,21 @@ Use it for quick laughs, waiting time, or a tiny test of self-control.""",
     },
 }
 
+META["ja"] = {
+    "description": """押すなと言われるほど、押したくなる。
+
+「絶対押すなよ」は、大きな赤いボタンを前にして、ただ押さずに耐えるミニアプリです。
+
+アプリを開くとタイマーが動き出します。ランダムな音声があなたをあおり、時間が経つほど緊張感が上がります。押さずに閉じれば耐えた時間を表示。押してしまうと失敗画面へ進み、説教ボイスが流れます。
+
+ちょっとした待ち時間、友だちとのネタ、自制心チェックにどうぞ。""",
+    "keywords": "押すな,赤いボタン,ミニゲーム,暇つぶし,音声,タイマー,我慢,ネタ,自制心",
+    "whatsNew": "初回リリースです。",
+    "promotionalText": "押すな。絶対に押すな。あなたは何秒耐えられる？",
+    "marketingUrl": "https://snarfnet.github.io/",
+    "supportUrl": "https://snarfnet.github.io/",
+}
+
 p8 = open(P8_PATH, encoding="utf-8").read()
 
 
