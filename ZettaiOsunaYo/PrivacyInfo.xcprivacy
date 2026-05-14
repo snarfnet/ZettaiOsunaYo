@@ -1,0 +1,23 @@
+{
+  "NSPrivacyCollectedDataTypes" : [
+    {
+      "NSPrivacyCollectedDataType" : "NSPrivacyCollectedDataTypeAdvertisingData",
+      "NSPrivacyCollectedDataTypeLinked" : false,
+      "NSPrivacyCollectedDataTypeTracking" : true,
+      "NSPrivacyCollectedDataTypePurposes" : [
+        "NSPrivacyCollectedDataTypePurposeThirdPartyAdvertising"
+      ]
+    },
+    {
+      "NSPrivacyCollectedDataType" : "NSPrivacyCollectedDataTypeDeviceID",
+      "NSPrivacyCollectedDataTypeLinked" : false,
+      "NSPrivacyCollectedDataTypeTracking" : true,
+      "NSPrivacyCollectedDataTypePurposes" : [
+        "NSPrivacyCollectedDataTypePurposeThirdPartyAdvertising"
+      ]
+    }
+  ],
+  "NSPrivacyTracking" : true,
+  "NSPrivacyTrackingDomains" : [],
+  "NSPrivacyAccessedAPITypes" : []
+}
