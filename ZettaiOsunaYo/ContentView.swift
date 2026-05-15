@@ -54,6 +54,7 @@ private struct ResistanceView: View {
             VStack(spacing: 18) {
                 HeaderPanel()
                 ContentSummaryPanel()
+                DefenseGamePanel()
                 ReactionCardPanel()
                 ScenarioDeckPanel()
                 DailyTrainingPanel()
@@ -154,6 +155,85 @@ private struct ContentSummaryPanel: View {
             }
         }
         .panelStyle()
+    }
+}
+
+private struct DefenseGamePanel: View {
+    @EnvironmentObject private var game: GameViewModel
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(alignment: .firstTextBaseline) {
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("ボタン防衛")
+                        .font(.headline.weight(.black))
+                        .foregroundStyle(.white)
+                    Text("安全タイルを処理してスコアを伸ばす。赤い罠は押さない")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.white.opacity(0.58))
+                }
+                Spacer()
+                VStack(alignment: .trailing, spacing: 2) {
+                    Text("\(game.defenseScore)")
+                        .font(.headline.monospacedDigit().weight(.black))
+                        .foregroundStyle(.white)
+                    Text("BEST \(game.bestDefenseScore)")
+                        .font(.caption2.monospacedDigit().weight(.heavy))
+                        .foregroundStyle(.white.opacity(0.5))
+                }
+            }
+
+            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 3), spacing: 8) {
+                ForEach(game.defenseTiles) { tile in
+                    Button {
+                        game.tapDefenseTile(tile)
+                    } label: {
+                        VStack(spacing: 5) {
+                            Image(systemName: tile.kind.iconName)
+                                .font(.title3.weight(.black))
+                            Text(tile.kind.title)
+                                .font(.caption.weight(.black))
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.7)
+                        }
+                        .frame(maxWidth: .infinity, minHeight: 66)
+                        .background(tileBackground(tile.kind), in: RoundedRectangle(cornerRadius: 8))
+                        .foregroundStyle(tile.kind == .bonus ? .black : .white)
+                        .overlay {
+                            RoundedRectangle(cornerRadius: 8)
+                                .stroke(.white.opacity(tile.kind == .trap ? 0.32 : 0.12), lineWidth: 1)
+                        }
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+
+            HStack {
+                Label("LIFE \(game.defenseLives)", systemImage: "heart.fill")
+                Spacer()
+                Label("COMBO \(game.defenseCombo)", systemImage: "bolt.fill")
+                Spacer()
+                Label("ROUND \(game.defenseRound)", systemImage: "square.grid.3x3.fill")
+            }
+            .font(.caption.monospacedDigit().weight(.heavy))
+            .foregroundStyle(.white.opacity(0.68))
+
+            Text(game.defenseMessage)
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.white.opacity(0.62))
+        }
+        .panelStyle()
+    }
+
+    private func tileBackground(_ kind: GameViewModel.DefenseTileKind) -> Color {
+        switch kind {
+        case .safe:
+            return Color.blue.opacity(0.34)
+        case .trap:
+            return Color.red.opacity(0.5)
+        case .bonus:
+            return Color.white.opacity(0.9)
+        }
     }
 }
 

@@ -158,6 +158,33 @@ final class GameViewModel: ObservableObject {
         let iconName: String
     }
 
+    enum DefenseTileKind: String, Equatable {
+        case safe
+        case trap
+        case bonus
+
+        var title: String {
+            switch self {
+            case .safe: "回避"
+            case .trap: "押すな"
+            case .bonus: "冷静"
+            }
+        }
+
+        var iconName: String {
+            switch self {
+            case .safe: "shield.fill"
+            case .trap: "hand.tap.fill"
+            case .bonus: "sparkles"
+            }
+        }
+    }
+
+    struct DefenseTile: Identifiable, Equatable {
+        let id: Int
+        let kind: DefenseTileKind
+    }
+
     @Published private(set) var state: State = .resisting
     @Published private(set) var elapsedSeconds: Int = 0
     @Published private(set) var pulseLevel: Double = 0
@@ -174,6 +201,13 @@ final class GameViewModel: ObservableObject {
     @Published private(set) var solvedReactionCount: Int = 0
     @Published private(set) var wrongReactionCount: Int = 0
     @Published private(set) var reactionMessage = "状況を読んで、押さない選択を選ぶ"
+    @Published private(set) var defenseTiles: [DefenseTile] = []
+    @Published private(set) var defenseScore: Int = 0
+    @Published private(set) var defenseCombo: Int = 0
+    @Published private(set) var bestDefenseScore: Int = 0
+    @Published private(set) var defenseLives: Int = 3
+    @Published private(set) var defenseRound: Int = 1
+    @Published private(set) var defenseMessage = "青い回避タイルと冷静タイルを処理。赤い罠は押さない。"
     @Published var selectedMode: Mode = .thirty
 
     private let audioPlayer: AudioTauntPlaying
@@ -189,6 +223,7 @@ final class GameViewModel: ObservableObject {
     private let bestEventStreakKey = "zettai.bestEventStreak.v1"
     private let solvedReactionCountKey = "zettai.solvedReactionCount.v1"
     private let wrongReactionCountKey = "zettai.wrongReactionCount.v1"
+    private let bestDefenseScoreKey = "zettai.bestDefenseScore.v1"
 
     init(audioPlayer: AudioTauntPlaying) {
         self.audioPlayer = audioPlayer
@@ -230,6 +265,7 @@ final class GameViewModel: ObservableObject {
         [
             ("任務", "\(missions.count)", "段階チャレンジ"),
             ("誘惑", "\(reactionCards.count)", "3択カード"),
+            ("防衛", "\(bestDefenseScore)", "最高スコア"),
             ("イベント", "\(pressureEvents.count)", "緊急対処"),
             ("実績", "\(achievements.count)", "称号と記録")
         ]
@@ -413,7 +449,9 @@ final class GameViewModel: ObservableObject {
             ("任務12", completedMissionCount >= 12),
             ("対処10", counteredEventCount >= 10),
             ("冷静100", sessions.contains { ($0.calmScore ?? 0) >= 100 }),
-            ("5分", bestSeconds >= 300)
+            ("5分", bestSeconds >= 300),
+            ("防衛50", bestDefenseScore >= 50),
+            ("防衛100", bestDefenseScore >= 100)
         ]
     }
 
@@ -428,6 +466,12 @@ final class GameViewModel: ObservableObject {
         eventStreak = 0
         activeReactionCard = reactionCards.randomElement()
         reactionMessage = "状況を読んで、押さない選択を選ぶ"
+        defenseScore = 0
+        defenseCombo = 0
+        defenseLives = 3
+        defenseRound = 1
+        defenseMessage = "青い回避タイルと冷静タイルを処理。赤い罠は押さない。"
+        refreshDefenseBoard()
         lastCalmActionSecond = -99
         audioPlayer.stopLoop()
         startClock()
@@ -492,6 +536,38 @@ final class GameViewModel: ObservableObject {
         reactionMessage = "この誘惑への対処を選んでください"
     }
 
+    func tapDefenseTile(_ tile: DefenseTile) {
+        guard state == .resisting else { return }
+        switch tile.kind {
+        case .safe:
+            defenseScore += 8 + defenseCombo
+            defenseCombo += 1
+            calmScore += 2
+            defenseMessage = "回避成功。赤い罠には触らない。"
+        case .bonus:
+            defenseScore += 15 + defenseCombo
+            defenseCombo += 2
+            calmScore += 6
+            pulseLevel = max(0, pulseLevel - 0.08)
+            defenseMessage = "冷静ボーナス。緊張を少し下げました。"
+        case .trap:
+            defenseLives -= 1
+            defenseCombo = 0
+            pulseLevel = min(1, pulseLevel + 0.2)
+            defenseMessage = defenseLives > 0 ? "赤い罠です。残り\(defenseLives)回。" : "罠を押しました。防衛失敗。"
+            if defenseLives <= 0 {
+                bestDefenseScore = max(bestDefenseScore, defenseScore)
+                persistDefenseStats()
+                pressForbiddenButton()
+                return
+            }
+        }
+        defenseRound += 1
+        bestDefenseScore = max(bestDefenseScore, defenseScore)
+        persistDefenseStats()
+        refreshDefenseBoard()
+    }
+
     func pressForbiddenButton() {
         guard state == .resisting else { return }
         updateElapsed()
@@ -517,10 +593,12 @@ final class GameViewModel: ObservableObject {
         bestEventStreak = 0
         solvedReactionCount = 0
         wrongReactionCount = 0
+        bestDefenseScore = 0
         persistSessions()
         persistCompletedMissions()
         persistCounteredEvents()
         persistReactionStats()
+        persistDefenseStats()
         start()
     }
 
@@ -540,6 +618,17 @@ final class GameViewModel: ObservableObject {
         counteredEventIDs = Set(["finger-close", "voice-bait", "red-flash", "heartbeat", "near-clear", "double-voice"])
         solvedReactionCount = 18
         wrongReactionCount = 3
+        defenseScore = 86
+        defenseCombo = 7
+        bestDefenseScore = 142
+        defenseLives = 3
+        defenseRound = 9
+        defenseTiles = [
+            DefenseTile(id: 0, kind: .safe), DefenseTile(id: 1, kind: .trap), DefenseTile(id: 2, kind: .safe),
+            DefenseTile(id: 3, kind: .bonus), DefenseTile(id: 4, kind: .safe), DefenseTile(id: 5, kind: .trap),
+            DefenseTile(id: 6, kind: .safe), DefenseTile(id: 7, kind: .bonus), DefenseTile(id: 8, kind: .safe)
+        ]
+        defenseMessage = "安全タイルを連続処理中。赤い罠は避ける。"
         bestEventStreak = 5
         activeMissionID = "first-30"
         selectedMode = .thirty
@@ -695,6 +784,7 @@ final class GameViewModel: ObservableObject {
         bestEventStreak = UserDefaults.standard.integer(forKey: bestEventStreakKey)
         solvedReactionCount = UserDefaults.standard.integer(forKey: solvedReactionCountKey)
         wrongReactionCount = UserDefaults.standard.integer(forKey: wrongReactionCountKey)
+        bestDefenseScore = UserDefaults.standard.integer(forKey: bestDefenseScoreKey)
         guard let data = UserDefaults.standard.data(forKey: sessionsKey),
               let decoded = try? JSONDecoder().decode([SessionRecord].self, from: data) else {
             return
@@ -721,6 +811,33 @@ final class GameViewModel: ObservableObject {
         UserDefaults.standard.set(solvedReactionCount, forKey: solvedReactionCountKey)
         UserDefaults.standard.set(wrongReactionCount, forKey: wrongReactionCountKey)
         UserDefaults.standard.set(bestEventStreak, forKey: bestEventStreakKey)
+    }
+
+    private func persistDefenseStats() {
+        UserDefaults.standard.set(bestDefenseScore, forKey: bestDefenseScoreKey)
+    }
+
+    private func refreshDefenseBoard() {
+        let trapCount = min(4, 1 + defenseRound / 4)
+        let bonusIndex = Int.random(in: 0..<9)
+        var trapIndices = Set<Int>()
+        while trapIndices.count < trapCount {
+            let index = Int.random(in: 0..<9)
+            if index != bonusIndex {
+                trapIndices.insert(index)
+            }
+        }
+        defenseTiles = (0..<9).map { index in
+            let kind: DefenseTileKind
+            if index == bonusIndex {
+                kind = .bonus
+            } else if trapIndices.contains(index) {
+                kind = .trap
+            } else {
+                kind = .safe
+            }
+            return DefenseTile(id: defenseRound * 10 + index, kind: kind)
+        }
     }
 
     func formatted(seconds: Int) -> String {

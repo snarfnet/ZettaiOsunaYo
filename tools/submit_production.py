@@ -29,14 +29,14 @@ META = {
 
 「絶対押すなよ」は、大きな赤いボタンを前にして、押さずに耐えるチャレンジゲームです。
 
-20本のチャレンジ任務、24枚の誘惑ジャッジ、16種類の緊急イベント、攻略メモ、日替わり修行、30秒チャレンジ、クラシック、限界耐久、煽り強めの4モードを収録。出題された状況を読んで3択から対処を選び、途中で出る緊急イベントにも合わせて行動します。
+赤い罠を避けて安全タイルを処理する「ボタン防衛」、20本のチャレンジ任務、24枚の誘惑ジャッジ、16種類の緊急イベント、攻略メモ、日替わり修行、30秒チャレンジ、クラシック、限界耐久、煽り強めの4モードを収録。防衛ゲームでは青い回避タイルと冷静ボーナスを押してスコアを伸ばし、赤い罠を避けます。
 
-ベストタイム、判断問題の正解数、最近の挑戦、勝利数、押してしまった回数、冷静ポイント、イベント対処数、コンボ、称号、16個の実績、任務の達成状況を保存。次はもう少し耐えたい、と思える記録型のネタゲームです。
+ベストタイム、防衛ハイスコア、判断問題の正解数、最近の挑戦、勝利数、押してしまった回数、冷静ポイント、イベント対処数、コンボ、称号、18個の実績、任務の達成状況を保存。次はもう少し伸ばしたい、と思える記録型のネタゲームです。
 
 友だちとの勝負、暇つぶし、自制心チェックにどうぞ。""",
         "keywords": "押すな,赤いボタン,ゲーム,暇つぶし,音声,タイマー,実績,記録,自制心",
-        "whatsNew": "収録コンテンツを増やしました。20本の任務、24枚の誘惑カード、16種類の緊急イベント、攻略メモを追加し、最初の画面で内容量が分かるようにしました。",
-        "promotionalText": "押すな。20任務、24誘惑カード、16イベントを越えろ。",
+        "whatsNew": "赤い罠を避けて安全タイルを処理する新モード「ボタン防衛」を追加しました。防衛スコア、コンボ、ライフ、ハイスコア、実績も保存します。",
+        "promotionalText": "押すな。赤い罠を避けて、ボタン防衛でスコアを伸ばせ。",
         "marketingUrl": "https://snarfnet.github.io/",
         "supportUrl": "https://snarfnet.github.io/",
     },
@@ -45,14 +45,14 @@ META = {
 
 Don't Press It is a challenge game built around one giant red button. Your goal is simple: resist.
 
-Clear 20 staged missions, answer 24 three-choice temptation judgment cards, handle 16 pressure events, read short strategy notes, or play four modes: 30-second challenge, classic, endurance, and high-pressure chaos. During play, pressure events appear and ask you to choose calm actions like breathing, looking away, and counting.
+Play Button Defense, an active tile game where you tap safe tiles and avoid red traps, clear 20 staged missions, answer 24 three-choice temptation judgment cards, handle 16 pressure events, read short strategy notes, or play four modes: 30-second challenge, classic, endurance, and high-pressure chaos.
 
-Best time, judgment answers, recent attempts, wins, presses, calm points, event counters, combo streaks, rank titles, 16 achievements, and mission progress are saved in the app, giving each short round a reason to try again.
+Best time, defense high score, judgment answers, recent attempts, wins, presses, calm points, event counters, combo streaks, rank titles, 18 achievements, and mission progress are saved in the app, giving each short round a reason to try again.
 
 Use it for quick laughs, waiting time, friendly challenges, or a tiny test of self-control.""",
         "keywords": "button,red button,game,challenge,voice,timer,achievements,records,self control",
-        "whatsNew": "Expanded the app with 20 missions, 24 temptation cards, 16 pressure events, strategy notes, and a first-screen content summary.",
-        "promotionalText": "Do not press it. Clear 20 missions, 24 cards, and 16 events.",
+        "whatsNew": "Added Button Defense, an active tile game where players tap safe tiles, avoid red traps, build combos, keep lives, and save a high score.",
+        "promotionalText": "Do not press it. Avoid red traps and build your Button Defense score.",
         "marketingUrl": "https://snarfnet.github.io/",
         "supportUrl": "https://snarfnet.github.io/",
     },
@@ -268,9 +268,10 @@ def ensure_review_detail(version_id):
         "demoAccountRequired": False,
         "notes": (
             "No login is required. The app does not call any external API. "
-            "The app now includes a visible content summary, 20 staged challenge missions, 24 three-choice temptation judgment cards, 16 pressure events, "
+            "The app now includes Button Defense, an active tile game where players tap safe tiles, avoid red traps, build combos, keep lives, and save a high score. "
+            "It also includes a visible content summary, 20 staged challenge missions, 24 three-choice temptation judgment cards, 16 pressure events, "
             "daily drills, strategy notes, matching calm actions, calm points, event counters, combo streaks, mission completion tracking, four challenge modes, "
-            "best-time tracking, 16 achievements, recent session history, rank titles, and bundled voice reactions played with AVAudioPlayer. "
+            "best-time tracking, 18 achievements, recent session history, rank titles, and bundled voice reactions played with AVAudioPlayer. "
             "All screenshots are captured from the running iOS app on simulators for the submitted device sizes. "
             "This build requests App Tracking Transparency permission shortly after first launch. "
             "Google Mobile Ads SDK is started only after the ATT flow completes or if the user has already made a tracking choice."
