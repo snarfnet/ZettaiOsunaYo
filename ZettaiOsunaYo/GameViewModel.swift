@@ -224,9 +224,9 @@ final class GameViewModel: ObservableObject {
             return "\(mission.title): \(formatted(seconds: mission.targetSeconds))まで耐える"
         }
         if let target = selectedMode.targetSeconds {
-            "\(formatted(seconds: target))まで耐える"
+            return "\(formatted(seconds: target))まで耐える"
         } else {
-            "押さずに退室すると記録"
+            return "押さずに退室すると記録"
         }
     }
 
