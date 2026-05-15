@@ -151,6 +151,13 @@ final class GameViewModel: ObservableObject {
         let reward: Int
     }
 
+    struct TrainingTip: Identifiable, Equatable {
+        let id: String
+        let title: String
+        let detail: String
+        let iconName: String
+    }
+
     @Published private(set) var state: State = .resisting
     @Published private(set) var elapsedSeconds: Int = 0
     @Published private(set) var pulseLevel: Double = 0
@@ -219,6 +226,15 @@ final class GameViewModel: ObservableObject {
         Array(sessions.prefix(5))
     }
 
+    var contentSummary: [(String, String, String)] {
+        [
+            ("任務", "\(missions.count)", "段階チャレンジ"),
+            ("誘惑", "\(reactionCards.count)", "3択カード"),
+            ("イベント", "\(pressureEvents.count)", "緊急対処"),
+            ("実績", "\(achievements.count)", "称号と記録")
+        ]
+    }
+
     var missions: [ChallengeMission] {
         [
             ChallengeMission(id: "first-10", title: "初級 10秒", detail: "まずは短く。赤いボタンを見ても動かない。", mode: .thirty, targetSeconds: 10, rewardTitle: "冷静な親指"),
@@ -228,7 +244,19 @@ final class GameViewModel: ObservableObject {
             ChallengeMission(id: "minute", title: "1分耐久", detail: "1分を越えると、ボタンの存在感が変わる。", mode: .classic, targetSeconds: 60, rewardTitle: "鉄の指先"),
             ChallengeMission(id: "endurance-90", title: "長期戦 90秒", detail: "急がず、押さず、淡々と耐える。", mode: .endurance, targetSeconds: 90, rewardTitle: "退室の達人"),
             ChallengeMission(id: "chaos-120", title: "赤い誘惑", detail: "煽り強めで2分。ここからが本番。", mode: .chaos, targetSeconds: 120, rewardTitle: "不動の人"),
-            ChallengeMission(id: "endurance-180", title: "3分の静寂", detail: "限界耐久で3分。称号更新を狙う。", mode: .endurance, targetSeconds: 180, rewardTitle: "押さない達人")
+            ChallengeMission(id: "endurance-180", title: "3分の静寂", detail: "限界耐久で3分。称号更新を狙う。", mode: .endurance, targetSeconds: 180, rewardTitle: "押さない達人"),
+            ChallengeMission(id: "quick-reset", title: "リセット我慢", detail: "失敗後すぐ押したい気持ちを15秒止める。", mode: .thirty, targetSeconds: 15, rewardTitle: "仕切り直し上手"),
+            ChallengeMission(id: "silent-40", title: "無音の40秒", detail: "静かな間こそ危ない。画面を見すぎない。", mode: .classic, targetSeconds: 40, rewardTitle: "沈黙の番人"),
+            ChallengeMission(id: "blink-55", title: "点滅55秒", detail: "赤い変化に釣られず、呼吸で流す。", mode: .classic, targetSeconds: 55, rewardTitle: "赤信号スルー"),
+            ChallengeMission(id: "count-70", title: "数えて70秒", detail: "3秒数える行動を軸に耐える。", mode: .endurance, targetSeconds: 70, rewardTitle: "カウント職人"),
+            ChallengeMission(id: "friend-80", title: "友だちの煽り", detail: "人に見られているつもりで80秒。", mode: .chaos, targetSeconds: 80, rewardTitle: "挑発無効"),
+            ChallengeMission(id: "focus-100", title: "視線外し100秒", detail: "目をそらす行動を使って長めに耐える。", mode: .endurance, targetSeconds: 100, rewardTitle: "視線コントロール"),
+            ChallengeMission(id: "calm-120", title: "冷静120", detail: "冷静ポイントを稼ぎながら2分。", mode: .endurance, targetSeconds: 120, rewardTitle: "心拍管理人"),
+            ChallengeMission(id: "no-action-30", title: "無操作30秒", detail: "あえて行動ボタンも使わず30秒。", mode: .thirty, targetSeconds: 30, rewardTitle: "手ぶら勝利"),
+            ChallengeMission(id: "late-game-150", title: "終盤150秒", detail: "後半の強い圧に備えて粘る。", mode: .endurance, targetSeconds: 150, rewardTitle: "終盤耐性"),
+            ChallengeMission(id: "chaos-180", title: "煽り3分", detail: "煽り強めで3分。かなりしぶとい人向け。", mode: .chaos, targetSeconds: 180, rewardTitle: "挑発の壁"),
+            ChallengeMission(id: "classic-240", title: "4分の赤", detail: "クラシックで4分。ボタンと同居する。", mode: .classic, targetSeconds: 240, rewardTitle: "赤の同居人"),
+            ChallengeMission(id: "endurance-300", title: "5分耐久", detail: "長期戦の到達点。集中を切らさない。", mode: .endurance, targetSeconds: 300, rewardTitle: "絶対王者")
         ]
     }
 
@@ -239,7 +267,17 @@ final class GameViewModel: ObservableObject {
             PressureEvent(id: "red-flash", title: "赤い点滅", detail: "深呼吸でゲージを落ち着かせる", requiredAction: .breathe, bonus: 12),
             PressureEvent(id: "silent-gap", title: "静かすぎる", detail: "3秒数えて次の煽りに備える", requiredAction: .count, bonus: 15),
             PressureEvent(id: "button-grow", title: "ボタン巨大化", detail: "目をそらして存在感を下げる", requiredAction: .lookAway, bonus: 13),
-            PressureEvent(id: "heartbeat", title: "鼓動が早い", detail: "深呼吸で手を止める", requiredAction: .breathe, bonus: 18)
+            PressureEvent(id: "heartbeat", title: "鼓動が早い", detail: "深呼吸で手を止める", requiredAction: .breathe, bonus: 18),
+            PressureEvent(id: "tiny-button", title: "押しやすいサイズ", detail: "小さい罠は数えて見送る", requiredAction: .count, bonus: 12),
+            PressureEvent(id: "near-clear", title: "あと少し", detail: "油断しそうな終盤は目をそらす", requiredAction: .lookAway, bonus: 17),
+            PressureEvent(id: "double-voice", title: "二重の声", detail: "深呼吸で音の圧を下げる", requiredAction: .breathe, bonus: 15),
+            PressureEvent(id: "fake-finish", title: "終わった気がする", detail: "3秒数えて画面を確認する", requiredAction: .count, bonus: 14),
+            PressureEvent(id: "red-shadow", title: "赤い影", detail: "視線を外して反射を切る", requiredAction: .lookAway, bonus: 16),
+            PressureEvent(id: "fast-pulse", title: "高速パルス", detail: "深呼吸でテンポを戻す", requiredAction: .breathe, bonus: 19),
+            PressureEvent(id: "tap-memory", title: "押した記憶", detail: "数えて指の癖を止める", requiredAction: .count, bonus: 13),
+            PressureEvent(id: "screen-glare", title: "画面が光る", detail: "目をそらして光を逃がす", requiredAction: .lookAway, bonus: 14),
+            PressureEvent(id: "last-second", title: "最後の1秒感", detail: "深呼吸で早押しを防ぐ", requiredAction: .breathe, bonus: 20),
+            PressureEvent(id: "thumb-warm", title: "親指が熱い", detail: "3秒数えて手を離す", requiredAction: .count, bonus: 18)
         ]
     }
 
@@ -250,7 +288,40 @@ final class GameViewModel: ObservableObject {
             ReactionCard(id: "red-pulse", prompt: "赤い光が強く点滅。画面から目が離れない。", choices: [.lookAway, .breathe, .count], correctAction: .lookAway, reward: 22),
             ReactionCard(id: "friend-dare", prompt: "友だちが『ここで押せる？』と煽ってきた。", choices: [.count, .lookAway, .breathe], correctAction: .count, reward: 17),
             ReactionCard(id: "silent-room", prompt: "急に静かになった。次の音に反応しそう。", choices: [.breathe, .lookAway, .count], correctAction: .breathe, reward: 16),
-            ReactionCard(id: "thumb-hover", prompt: "親指がボタンの上で止まっている。", choices: [.lookAway, .count, .breathe], correctAction: .lookAway, reward: 21)
+            ReactionCard(id: "thumb-hover", prompt: "親指がボタンの上で止まっている。", choices: [.lookAway, .count, .breathe], correctAction: .lookAway, reward: 21),
+            ReactionCard(id: "almost-clear", prompt: "残り数秒。勝った気がして指が動きそう。", choices: [.breathe, .count, .lookAway], correctAction: .count, reward: 19),
+            ReactionCard(id: "small-button", prompt: "ボタンが小さく見える。危険度が低そうに見える。", choices: [.count, .lookAway, .breathe], correctAction: .count, reward: 18),
+            ReactionCard(id: "big-button", prompt: "ボタンが画面いっぱいに迫ってくる。", choices: [.lookAway, .breathe, .count], correctAction: .lookAway, reward: 24),
+            ReactionCard(id: "fake-rule", prompt: "『一回だけならセーフ』という文字が出た。", choices: [.count, .breathe, .lookAway], correctAction: .count, reward: 23),
+            ReactionCard(id: "fast-heart", prompt: "心拍が早くなり、すぐ決めたくなる。", choices: [.breathe, .lookAway, .count], correctAction: .breathe, reward: 20),
+            ReactionCard(id: "red-afterimage", prompt: "赤い残像が目に残っている。", choices: [.lookAway, .count, .breathe], correctAction: .lookAway, reward: 19),
+            ReactionCard(id: "score-greed", prompt: "押したら隠しボーナスがありそうに見える。", choices: [.count, .lookAway, .breathe], correctAction: .count, reward: 22),
+            ReactionCard(id: "quiet-win", prompt: "何も起きない。退屈で押したくなってきた。", choices: [.breathe, .count, .lookAway], correctAction: .breathe, reward: 17),
+            ReactionCard(id: "voice-soft", prompt: "優しい声で『押してもいいよ』と言われた。", choices: [.count, .breathe, .lookAway], correctAction: .count, reward: 21),
+            ReactionCard(id: "finger-slip", prompt: "指が滑ってボタンに近づいた。", choices: [.lookAway, .count, .breathe], correctAction: .lookAway, reward: 20),
+            ReactionCard(id: "screen-freeze", prompt: "画面が止まったように見える。触って確認したい。", choices: [.count, .breathe, .lookAway], correctAction: .count, reward: 18),
+            ReactionCard(id: "friend-laugh", prompt: "横で笑われた。焦って何かしたくなる。", choices: [.breathe, .count, .lookAway], correctAction: .breathe, reward: 19),
+            ReactionCard(id: "timer-hide", prompt: "タイマーが隠れた。あと何秒か気になる。", choices: [.count, .lookAway, .breathe], correctAction: .count, reward: 16),
+            ReactionCard(id: "red-ring", prompt: "赤いリングが広がって、中央を見てしまう。", choices: [.lookAway, .breathe, .count], correctAction: .lookAway, reward: 23),
+            ReactionCard(id: "almost-touch", prompt: "押していないのに、押した感覚だけがある。", choices: [.breathe, .count, .lookAway], correctAction: .breathe, reward: 18),
+            ReactionCard(id: "new-record", prompt: "新記録が近い。ここで欲を出しそう。", choices: [.count, .lookAway, .breathe], correctAction: .count, reward: 25),
+            ReactionCard(id: "advice-bait", prompt: "攻略メモが『押して確認』と言っている気がする。", choices: [.lookAway, .breathe, .count], correctAction: .lookAway, reward: 22),
+            ReactionCard(id: "double-tap", prompt: "二回押せば逆に勝ち、という謎の理屈が浮かんだ。", choices: [.breathe, .count, .lookAway], correctAction: .breathe, reward: 24)
+        ]
+    }
+
+    var featuredReactionCards: [ReactionCard] {
+        Array(reactionCards.prefix(12))
+    }
+
+    var trainingTips: [TrainingTip] {
+        [
+            TrainingTip(id: "breathe-first", title: "最初は深呼吸", detail: "緊張ゲージが上がる前に呼吸で余裕を作る。", iconName: "wind"),
+            TrainingTip(id: "look-away", title: "見すぎない", detail: "赤いボタンを注視すると押したくなる。", iconName: "eye.slash.fill"),
+            TrainingTip(id: "count-three", title: "3秒だけ待つ", detail: "反射で押しそうな時は数える。", iconName: "timer"),
+            TrainingTip(id: "mission-order", title: "短い任務から", detail: "10秒、30秒、45秒の順で慣れる。", iconName: "list.number"),
+            TrainingTip(id: "chaos-later", title: "煽り強めは後で", detail: "記録を作ってから挑むと続きやすい。", iconName: "flame.fill"),
+            TrainingTip(id: "record-mood", title: "失敗も記録", detail: "押した回数も履歴に残るので次に活かす。", iconName: "clock.arrow.circlepath")
         ]
     }
 
@@ -258,7 +329,7 @@ final class GameViewModel: ObservableObject {
         let all = missions
         guard !all.isEmpty else { return [] }
         let day = Calendar.current.ordinality(of: .day, in: .era, for: Date()) ?? 0
-        return (0..<3).map { all[(day + $0 * 2) % all.count] }
+        return (0..<4).map { all[(day + $0 * 2) % all.count] }
     }
 
     var dailyTrainingProgressText: String {
@@ -338,7 +409,11 @@ final class GameViewModel: ObservableObject {
             ("対処3", counteredEventCount >= 3),
             ("コンボ5", bestEventStreak >= 5),
             ("判断5", solvedReactionCount >= 5),
-            ("判断20", solvedReactionCount >= 20)
+            ("判断20", solvedReactionCount >= 20),
+            ("任務12", completedMissionCount >= 12),
+            ("対処10", counteredEventCount >= 10),
+            ("冷静100", sessions.contains { ($0.calmScore ?? 0) >= 100 }),
+            ("5分", bestSeconds >= 300)
         ]
     }
 
@@ -411,6 +486,12 @@ final class GameViewModel: ObservableObject {
         activeReactionCard = nextReactionCard(after: card)
     }
 
+    func selectReactionCard(_ card: ReactionCard) {
+        guard state == .resisting else { return }
+        activeReactionCard = card
+        reactionMessage = "この誘惑への対処を選んでください"
+    }
+
     func pressForbiddenButton() {
         guard state == .resisting else { return }
         updateElapsed()
@@ -455,9 +536,9 @@ final class GameViewModel: ObservableObject {
             SessionRecord(id: UUID(), date: Date(), mode: .chaos, seconds: 24, succeeded: false, calmScore: 18, missionTitle: "煽り強め入門")
         ]
         sessions = sampleSessions
-        completedMissionIDs = Set(["first-10", "first-30", "calm-45"])
-        counteredEventIDs = Set(["finger-close", "voice-bait", "red-flash", "heartbeat"])
-        solvedReactionCount = 12
+        completedMissionIDs = Set(["first-10", "first-30", "calm-45", "chaos-45", "minute", "endurance-90", "quick-reset", "silent-40"])
+        counteredEventIDs = Set(["finger-close", "voice-bait", "red-flash", "heartbeat", "near-clear", "double-voice"])
+        solvedReactionCount = 18
         wrongReactionCount = 3
         bestEventStreak = 5
         activeMissionID = "first-30"

@@ -53,10 +53,12 @@ private struct ResistanceView: View {
         ScrollView(showsIndicators: false) {
             VStack(spacing: 18) {
                 HeaderPanel()
+                ContentSummaryPanel()
+                ReactionCardPanel()
+                ScenarioDeckPanel()
                 DailyTrainingPanel()
                 ChallengePanel()
                 ModePicker()
-                ReactionCardPanel()
 
                 ButtonPanel(
                     buttonBreathes: buttonBreathes,
@@ -65,6 +67,7 @@ private struct ResistanceView: View {
 
                 PressureEventPanel()
                 CalmActionPanel()
+                TipsPanel()
                 ProgressPanel()
                 AchievementPanel()
                 HistoryPanel()
@@ -109,6 +112,51 @@ private struct HeaderPanel: View {
     }
 }
 
+private struct ContentSummaryPanel: View {
+    @EnvironmentObject private var game: GameViewModel
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("遊べる内容")
+                        .font(.headline.weight(.black))
+                        .foregroundStyle(.white)
+                    Text("任務、3択、緊急イベント、実績を集めて記録を伸ばす")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.white.opacity(0.58))
+                }
+                Spacer()
+                Label(game.rankTitle, systemImage: "crown.fill")
+                    .font(.caption.weight(.heavy))
+                    .foregroundStyle(.yellow.opacity(0.92))
+            }
+
+            LazyVGrid(columns: [GridItem(.adaptive(minimum: 118), spacing: 8)], spacing: 8) {
+                ForEach(Array(game.contentSummary.enumerated()), id: \.offset) { pair in
+                    VStack(alignment: .leading, spacing: 5) {
+                        Text(pair.element.0)
+                            .font(.caption.weight(.heavy))
+                            .foregroundStyle(.white.opacity(0.58))
+                        Text(pair.element.1)
+                            .font(.title2.monospacedDigit().weight(.black))
+                            .foregroundStyle(.white)
+                        Text(pair.element.2)
+                            .font(.caption2.weight(.heavy))
+                            .foregroundStyle(.white.opacity(0.48))
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.72)
+                    }
+                    .frame(maxWidth: .infinity, minHeight: 82, alignment: .leading)
+                    .padding(10)
+                    .background(Color.white.opacity(0.075), in: RoundedRectangle(cornerRadius: 8))
+                }
+            }
+        }
+        .panelStyle()
+    }
+}
+
 private struct DailyTrainingPanel: View {
     @EnvironmentObject private var game: GameViewModel
 
@@ -119,7 +167,7 @@ private struct DailyTrainingPanel: View {
                     Text("今日の修行")
                         .font(.headline.weight(.black))
                         .foregroundStyle(.white)
-                    Text("日替わり3本をクリアして、押さない力を積み上げる")
+                    Text("日替わり4本をクリアして、押さない力を積み上げる")
                         .font(.caption.weight(.semibold))
                         .foregroundStyle(.white.opacity(0.58))
                 }
@@ -129,7 +177,7 @@ private struct DailyTrainingPanel: View {
                     .foregroundStyle(.white)
             }
 
-            HStack(spacing: 10) {
+            LazyVGrid(columns: [GridItem(.adaptive(minimum: 126), spacing: 10)], spacing: 10) {
                 ForEach(game.dailyTrainingMissions) { mission in
                     Button {
                         game.startMission(mission)
@@ -168,7 +216,7 @@ private struct ChallengePanel: View {
                     Text("チャレンジ任務")
                         .font(.headline.weight(.black))
                         .foregroundStyle(.white)
-                    Text("順番にクリアして称号を集める")
+                    Text("短期戦から長期戦まで、順番にクリアして称号を集める")
                         .font(.caption.weight(.semibold))
                         .foregroundStyle(.white.opacity(0.58))
                 }
@@ -406,6 +454,62 @@ private struct ReactionCardPanel: View {
     }
 }
 
+private struct ScenarioDeckPanel: View {
+    @EnvironmentObject private var game: GameViewModel
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("誘惑カード一覧")
+                        .font(.headline.weight(.black))
+                        .foregroundStyle(.white)
+                    Text("好きな状況を選ぶと、上のジャッジ問題に出題される")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.white.opacity(0.58))
+                }
+                Spacer()
+                Text("\(game.reactionCards.count)枚")
+                    .font(.caption.monospacedDigit().weight(.black))
+                    .foregroundStyle(.white.opacity(0.7))
+            }
+
+            LazyVGrid(columns: [GridItem(.adaptive(minimum: 170), spacing: 10)], spacing: 10) {
+                ForEach(game.featuredReactionCards) { card in
+                    Button {
+                        game.selectReactionCard(card)
+                    } label: {
+                        VStack(alignment: .leading, spacing: 7) {
+                            HStack {
+                                Image(systemName: card.correctAction.iconName)
+                                Text("+\(card.reward)")
+                                    .font(.caption.monospacedDigit().weight(.black))
+                                Spacer()
+                            }
+                            .foregroundStyle(.white.opacity(0.64))
+
+                            Text(card.prompt)
+                                .font(.caption.weight(.heavy))
+                                .foregroundStyle(.white)
+                                .lineLimit(3)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                        .frame(maxWidth: .infinity, minHeight: 94, alignment: .topLeading)
+                        .padding(11)
+                        .background(card.id == game.activeReactionCard?.id ? Color.red.opacity(0.38) : Color.white.opacity(0.07), in: RoundedRectangle(cornerRadius: 8))
+                        .overlay {
+                            RoundedRectangle(cornerRadius: 8)
+                                .stroke(card.id == game.activeReactionCard?.id ? Color.white.opacity(0.42) : Color.white.opacity(0.1), lineWidth: 1)
+                        }
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+        }
+        .panelStyle()
+    }
+}
+
 private struct PressureEventPanel: View {
     @EnvironmentObject private var game: GameViewModel
 
@@ -510,6 +614,42 @@ private struct CalmActionPanel: View {
                     }
                     .buttonStyle(.plain)
                     .disabled(!game.canUseCalmAction)
+                }
+            }
+        }
+        .panelStyle()
+    }
+}
+
+private struct TipsPanel: View {
+    @EnvironmentObject private var game: GameViewModel
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("攻略メモ")
+                .font(.headline.weight(.black))
+                .foregroundStyle(.white)
+
+            LazyVGrid(columns: [GridItem(.adaptive(minimum: 170), spacing: 10)], spacing: 10) {
+                ForEach(game.trainingTips) { tip in
+                    HStack(alignment: .top, spacing: 10) {
+                        Image(systemName: tip.iconName)
+                            .font(.headline.weight(.bold))
+                            .foregroundStyle(.white.opacity(0.72))
+                            .frame(width: 24)
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(tip.title)
+                                .font(.caption.weight(.black))
+                                .foregroundStyle(.white)
+                            Text(tip.detail)
+                                .font(.caption2.weight(.semibold))
+                                .foregroundStyle(.white.opacity(0.56))
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                    }
+                    .frame(maxWidth: .infinity, minHeight: 74, alignment: .topLeading)
+                    .padding(10)
+                    .background(Color.white.opacity(0.065), in: RoundedRectangle(cornerRadius: 8))
                 }
             }
         }

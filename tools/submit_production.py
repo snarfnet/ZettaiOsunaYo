@@ -29,14 +29,14 @@ META = {
 
 「絶対押すなよ」は、大きな赤いボタンを前にして、押さずに耐えるチャレンジゲームです。
 
-日替わりの修行、ステージ制のチャレンジ任務、誘惑ジャッジ、30秒チャレンジ、クラシック、限界耐久、煽り強めの4モードを収録。出題された状況を読んで3択から対処を選び、途中で出る緊急イベントにも合わせて行動します。
+20本のチャレンジ任務、24枚の誘惑ジャッジ、16種類の緊急イベント、攻略メモ、日替わり修行、30秒チャレンジ、クラシック、限界耐久、煽り強めの4モードを収録。出題された状況を読んで3択から対処を選び、途中で出る緊急イベントにも合わせて行動します。
 
-ベストタイム、判断問題の正解数、最近の挑戦、勝利数、押してしまった回数、冷静ポイント、イベント対処数、コンボ、称号、実績、任務の達成状況を保存。次はもう少し耐えたい、と思える記録型のネタゲームです。
+ベストタイム、判断問題の正解数、最近の挑戦、勝利数、押してしまった回数、冷静ポイント、イベント対処数、コンボ、称号、16個の実績、任務の達成状況を保存。次はもう少し耐えたい、と思える記録型のネタゲームです。
 
 友だちとの勝負、暇つぶし、自制心チェックにどうぞ。""",
         "keywords": "押すな,赤いボタン,ゲーム,暇つぶし,音声,タイマー,実績,記録,自制心",
-        "whatsNew": "誘惑ジャッジを追加しました。状況を読んで3択から対処を選ぶ遊びを前面に出し、スクリーンショットは実アプリから撮影する形に更新しました。",
-        "promotionalText": "押すな。絶対に押すな。3択ジャッジと緊急イベントを越えろ。",
+        "whatsNew": "収録コンテンツを増やしました。20本の任務、24枚の誘惑カード、16種類の緊急イベント、攻略メモを追加し、最初の画面で内容量が分かるようにしました。",
+        "promotionalText": "押すな。20任務、24誘惑カード、16イベントを越えろ。",
         "marketingUrl": "https://snarfnet.github.io/",
         "supportUrl": "https://snarfnet.github.io/",
     },
@@ -45,14 +45,14 @@ META = {
 
 Don't Press It is a challenge game built around one giant red button. Your goal is simple: resist.
 
-Clear daily drills and staged missions, answer three-choice temptation judgment cards, or play four modes: 30-second challenge, classic, endurance, and high-pressure chaos. During play, pressure events appear and ask you to choose calm actions like breathing, looking away, and counting.
+Clear 20 staged missions, answer 24 three-choice temptation judgment cards, handle 16 pressure events, read short strategy notes, or play four modes: 30-second challenge, classic, endurance, and high-pressure chaos. During play, pressure events appear and ask you to choose calm actions like breathing, looking away, and counting.
 
-Best time, judgment answers, recent attempts, wins, presses, calm points, event counters, combo streaks, rank titles, achievements, and mission progress are saved in the app, giving each short round a reason to try again.
+Best time, judgment answers, recent attempts, wins, presses, calm points, event counters, combo streaks, rank titles, 16 achievements, and mission progress are saved in the app, giving each short round a reason to try again.
 
 Use it for quick laughs, waiting time, friendly challenges, or a tiny test of self-control.""",
         "keywords": "button,red button,game,challenge,voice,timer,achievements,records,self control",
-        "whatsNew": "Added three-choice temptation judgment cards and updated screenshots captured from the running app.",
-        "promotionalText": "Do not press it. Answer judgment cards and counter pressure events.",
+        "whatsNew": "Expanded the app with 20 missions, 24 temptation cards, 16 pressure events, strategy notes, and a first-screen content summary.",
+        "promotionalText": "Do not press it. Clear 20 missions, 24 cards, and 16 events.",
         "marketingUrl": "https://snarfnet.github.io/",
         "supportUrl": "https://snarfnet.github.io/",
     },
@@ -268,9 +268,9 @@ def ensure_review_detail(version_id):
         "demoAccountRequired": False,
         "notes": (
             "No login is required. The app does not call any external API. "
-            "The app now includes three-choice temptation judgment cards shown during play, daily drills, staged challenge missions, pressure events that appear during play, "
-            "matching calm actions, calm points, event counters, combo streaks, mission completion tracking, four challenge modes, "
-            "best-time tracking, achievements, recent session history, rank titles, and bundled voice reactions played with AVAudioPlayer. "
+            "The app now includes a visible content summary, 20 staged challenge missions, 24 three-choice temptation judgment cards, 16 pressure events, "
+            "daily drills, strategy notes, matching calm actions, calm points, event counters, combo streaks, mission completion tracking, four challenge modes, "
+            "best-time tracking, 16 achievements, recent session history, rank titles, and bundled voice reactions played with AVAudioPlayer. "
             "All screenshots are captured from the running iOS app on simulators for the submitted device sizes. "
             "This build requests App Tracking Transparency permission shortly after first launch. "
             "Google Mobile Ads SDK is started only after the ATT flow completes or if the user has already made a tracking choice."
