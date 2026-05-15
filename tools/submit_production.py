@@ -1,4 +1,4 @@
-import hashlib
+﻿import hashlib
 import os
 import time
 from pathlib import Path
@@ -27,50 +27,36 @@ META = {
     "ja": {
         "description": """押すなと言われるほど、押したくなる。
 
-「絶対押すなよ」は、巨大な赤いボタンを前に、ただ押さずに耐えるだけの緊張系ミニアプリです。
+「絶対押すなよ」は、大きな赤いボタンを前にして、押さずに耐えるミニゲームです。
 
-起動した瞬間からタイマーが始まり、ランダムな煽り音声があなたの指先を試します。時間が経つほど音声の頻度は上がり、赤いボタンの存在感もじわじわ増していきます。
+30秒チャレンジ、クラシック、限界耐久、煽り強めの4モードを収録。タイマー、緊張ゲージ、ランダム音声、失敗時のリアクションで、短い待ち時間でも遊べます。
 
-押さずにアプリを閉じれば、耐え抜いた時間を表示。押してしまったら失敗画面へ移動し、説教音声がずっと続きます。
+ベストタイム、最近の挑戦、勝利数、押してしまった回数、称号、実績も保存。次はもう少し耐えたい、と思える記録型のネタゲームです。
 
-ちょっとした待ち時間、友だちとのネタ、謎の自制心チェックにどうぞ。""",
-        "keywords": "押すな,赤いボタン,ミニゲーム,暇つぶし,耐久,音声,ネタ,ドッキリ,反射神経,自制心",
-        "whatsNew": "初回リリースです。",
-        "promotionalText": "押すな。絶対に押すな。あなたは何分耐えられる？",
+友だちとの勝負、暇つぶし、自制心チェックにどうぞ。""",
+        "keywords": "押すな,赤いボタン,ミニゲーム,暇つぶし,音声,タイマー,実績,記録,自制心",
+        "whatsNew": "4つのチャレンジモード、実績、称号、ベストタイム、最近の挑戦履歴を追加しました。",
+        "promotionalText": "押すな。絶対に押すな。4つのモードで何秒耐えられる？",
         "marketingUrl": "https://snarfnet.github.io/",
         "supportUrl": "https://snarfnet.github.io/",
     },
     "en-US": {
         "description": """The more you are told not to press it, the more tempting it gets.
 
-Don't Press It is a tense little mini app where you face one giant red button and try to resist.
+Don't Press It is a small challenge game built around one giant red button. Your goal is simple: resist.
 
-The timer starts as soon as the app opens. Random voice lines tease you while the pressure rises over time. If you leave without pressing, the app shows how long you endured. If you press the button, you fail and the lecture voice keeps going.
+Play four modes: 30-second challenge, classic, endurance, and high-pressure chaos. The app tracks time, raises tension, plays random voice reactions, and records what happened when you finally give in.
 
-Use it for quick laughs, waiting time, or a tiny test of self-control.""",
-        "keywords": "button,red button,mini game,prank,voice,timer,patience,self control,casual",
-        "whatsNew": "Initial release.",
-        "promotionalText": "Do not press it. Seriously. How long can you last?",
+Best time, recent attempts, wins, presses, rank titles, and achievements are saved in the app, giving each short round a reason to try again.
+
+Use it for quick laughs, waiting time, friendly challenges, or a tiny test of self-control.""",
+        "keywords": "button,red button,mini game,challenge,voice,timer,achievements,records,self control",
+        "whatsNew": "Added four challenge modes, achievements, rank titles, best time, and recent attempt history.",
+        "promotionalText": "Do not press it. Four modes. One red button. How long can you last?",
         "marketingUrl": "https://snarfnet.github.io/",
         "supportUrl": "https://snarfnet.github.io/",
     },
 }
-
-META["ja"] = {
-    "description": """押すなと言われるほど、押したくなる。
-
-「絶対押すなよ」は、大きな赤いボタンを前にして、ただ押さずに耐えるミニアプリです。
-
-アプリを開くとタイマーが動き出します。ランダムな音声があなたをあおり、時間が経つほど緊張感が上がります。押さずに閉じれば耐えた時間を表示。押してしまうと失敗画面へ進み、説教ボイスが流れます。
-
-ちょっとした待ち時間、友だちとのネタ、自制心チェックにどうぞ。""",
-    "keywords": "押すな,赤いボタン,ミニゲーム,暇つぶし,音声,タイマー,我慢,ネタ,自制心",
-    "whatsNew": "初回リリースです。",
-    "promotionalText": "押すな。絶対に押すな。あなたは何秒耐えられる？",
-    "marketingUrl": "https://snarfnet.github.io/",
-    "supportUrl": "https://snarfnet.github.io/",
-}
-
 p8 = open(P8_PATH, encoding="utf-8").read()
 
 
@@ -282,7 +268,8 @@ def ensure_review_detail(version_id):
         "demoAccountRequired": False,
         "notes": (
             "No login is required. The app does not call any external API. "
-            "Bundled mp3 audio is played with AVAudioPlayer. "
+            "The app now includes four challenge modes, best-time tracking, achievements, recent session history, "
+            "rank titles, and bundled voice reactions played with AVAudioPlayer. "
             "This build requests App Tracking Transparency permission shortly after first launch. "
             "Google Mobile Ads SDK is started only after the ATT flow completes or if the user has already made a tracking choice."
         ),
@@ -597,3 +584,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
