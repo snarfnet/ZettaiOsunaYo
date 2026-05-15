@@ -143,6 +143,14 @@ final class GameViewModel: ObservableObject {
         let bonus: Int
     }
 
+    struct ReactionCard: Identifiable, Equatable {
+        let id: String
+        let prompt: String
+        let choices: [CalmAction]
+        let correctAction: CalmAction
+        let reward: Int
+    }
+
     @Published private(set) var state: State = .resisting
     @Published private(set) var elapsedSeconds: Int = 0
     @Published private(set) var pulseLevel: Double = 0
@@ -155,6 +163,10 @@ final class GameViewModel: ObservableObject {
     @Published private(set) var eventStreak: Int = 0
     @Published private(set) var bestEventStreak: Int = 0
     @Published private(set) var counteredEventIDs: Set<String> = []
+    @Published private(set) var activeReactionCard: ReactionCard?
+    @Published private(set) var solvedReactionCount: Int = 0
+    @Published private(set) var wrongReactionCount: Int = 0
+    @Published private(set) var reactionMessage = "状況を読んで、押さない選択を選ぶ"
     @Published var selectedMode: Mode = .thirty
 
     private let audioPlayer: AudioTauntPlaying
@@ -168,6 +180,8 @@ final class GameViewModel: ObservableObject {
     private let completedMissionsKey = "zettai.completedMissions.v1"
     private let counteredEventsKey = "zettai.counteredEvents.v1"
     private let bestEventStreakKey = "zettai.bestEventStreak.v1"
+    private let solvedReactionCountKey = "zettai.solvedReactionCount.v1"
+    private let wrongReactionCountKey = "zettai.wrongReactionCount.v1"
 
     init(audioPlayer: AudioTauntPlaying) {
         self.audioPlayer = audioPlayer
@@ -229,6 +243,17 @@ final class GameViewModel: ObservableObject {
         ]
     }
 
+    var reactionCards: [ReactionCard] {
+        [
+            ReactionCard(id: "fake-safe", prompt: "ボタンが小さくなった。今なら押しても平気そう。", choices: [.count, .breathe, .lookAway], correctAction: .count, reward: 20),
+            ReactionCard(id: "voice-order", prompt: "音声が『押すな』を連呼。逆に押したくなってきた。", choices: [.breathe, .count, .lookAway], correctAction: .breathe, reward: 18),
+            ReactionCard(id: "red-pulse", prompt: "赤い光が強く点滅。画面から目が離れない。", choices: [.lookAway, .breathe, .count], correctAction: .lookAway, reward: 22),
+            ReactionCard(id: "friend-dare", prompt: "友だちが『ここで押せる？』と煽ってきた。", choices: [.count, .lookAway, .breathe], correctAction: .count, reward: 17),
+            ReactionCard(id: "silent-room", prompt: "急に静かになった。次の音に反応しそう。", choices: [.breathe, .lookAway, .count], correctAction: .breathe, reward: 16),
+            ReactionCard(id: "thumb-hover", prompt: "親指がボタンの上で止まっている。", choices: [.lookAway, .count, .breathe], correctAction: .lookAway, reward: 21)
+        ]
+    }
+
     var dailyTrainingMissions: [ChallengeMission] {
         let all = missions
         guard !all.isEmpty else { return [] }
@@ -260,6 +285,10 @@ final class GameViewModel: ObservableObject {
 
     var counteredEventCount: Int {
         counteredEventIDs.count
+    }
+
+    var reactionScoreText: String {
+        "\(solvedReactionCount)問"
     }
 
     var modeGoalText: String {
@@ -307,7 +336,9 @@ final class GameViewModel: ObservableObject {
             ("任務4", completedMissionCount >= 4),
             ("全任務", completedMissionCount >= missions.count),
             ("対処3", counteredEventCount >= 3),
-            ("コンボ5", bestEventStreak >= 5)
+            ("コンボ5", bestEventStreak >= 5),
+            ("判断5", solvedReactionCount >= 5),
+            ("判断20", solvedReactionCount >= 20)
         ]
     }
 
@@ -320,6 +351,8 @@ final class GameViewModel: ObservableObject {
         calmActionCooldown = 0
         activePressureEvent = nil
         eventStreak = 0
+        activeReactionCard = reactionCards.randomElement()
+        reactionMessage = "状況を読んで、押さない選択を選ぶ"
         lastCalmActionSecond = -99
         audioPlayer.stopLoop()
         startClock()
@@ -360,6 +393,24 @@ final class GameViewModel: ObservableObject {
         updateElapsed()
     }
 
+    func answerReaction(_ action: CalmAction) {
+        guard let card = activeReactionCard, state == .resisting else { return }
+        if action == card.correctAction {
+            solvedReactionCount += 1
+            calmScore += card.reward
+            eventStreak += 1
+            bestEventStreak = max(bestEventStreak, eventStreak)
+            reactionMessage = "正解。\(action.title)で誘惑を切りました"
+        } else {
+            wrongReactionCount += 1
+            eventStreak = 0
+            pulseLevel = min(1, pulseLevel + 0.16)
+            reactionMessage = "惜しい。今回は\(card.correctAction.title)が安全でした"
+        }
+        persistReactionStats()
+        activeReactionCard = nextReactionCard(after: card)
+    }
+
     func pressForbiddenButton() {
         guard state == .resisting else { return }
         updateElapsed()
@@ -383,10 +434,68 @@ final class GameViewModel: ObservableObject {
         completedMissionIDs = []
         counteredEventIDs = []
         bestEventStreak = 0
+        solvedReactionCount = 0
+        wrongReactionCount = 0
         persistSessions()
         persistCompletedMissions()
         persistCounteredEvents()
+        persistReactionStats()
         start()
+    }
+
+    func applyScreenshotPreset(_ preset: String) {
+        tickTask?.cancel()
+        normalAudioTask?.cancel()
+        pressureEventTask?.cancel()
+        audioPlayer.stopAll()
+
+        let sampleSessions = [
+            SessionRecord(id: UUID(), date: Date(), mode: .thirty, seconds: 30, succeeded: true, calmScore: 44, missionTitle: "30秒の壁"),
+            SessionRecord(id: UUID(), date: Date(), mode: .classic, seconds: 64, succeeded: true, calmScore: 57, missionTitle: "冷静キープ"),
+            SessionRecord(id: UUID(), date: Date(), mode: .chaos, seconds: 24, succeeded: false, calmScore: 18, missionTitle: "煽り強め入門")
+        ]
+        sessions = sampleSessions
+        completedMissionIDs = Set(["first-10", "first-30", "calm-45"])
+        counteredEventIDs = Set(["finger-close", "voice-bait", "red-flash", "heartbeat"])
+        solvedReactionCount = 12
+        wrongReactionCount = 3
+        bestEventStreak = 5
+        activeMissionID = "first-30"
+        selectedMode = .thirty
+        activeReactionCard = reactionCards.first { $0.id == "red-pulse" } ?? reactionCards.first
+        activePressureEvent = pressureEvents.first { $0.id == "red-flash" }
+        reactionMessage = "正しい行動を選ぶとコンボが伸びます"
+
+        switch preset {
+        case "missions":
+            state = .resisting
+            elapsedSeconds = 8
+            calmScore = 21
+            pulseLevel = 0.22
+            activeMissionID = "chaos-120"
+        case "actions":
+            state = .resisting
+            elapsedSeconds = 64
+            calmScore = 56
+            pulseLevel = 0.55
+            activeReactionCard = reactionCards.first { $0.id == "thumb-hover" } ?? reactionCards.first
+            activePressureEvent = pressureEvents.first { $0.id == "finger-close" }
+        case "failed":
+            state = .failed
+            elapsedSeconds = 24
+            calmScore = 18
+            pulseLevel = 0.86
+        case "survived":
+            state = .survived
+            elapsedSeconds = 180
+            calmScore = 91
+            pulseLevel = 0.18
+        default:
+            state = .resisting
+            elapsedSeconds = 18
+            calmScore = 24
+            pulseLevel = 0.42
+        }
     }
 
     private func completeChallenge() {
@@ -441,6 +550,11 @@ final class GameViewModel: ObservableObject {
                 self.activePressureEvent = self.pressureEvents.randomElement()
             }
         }
+    }
+
+    private func nextReactionCard(after card: ReactionCard) -> ReactionCard? {
+        let candidates = reactionCards.filter { $0.id != card.id }
+        return candidates.randomElement() ?? reactionCards.randomElement()
     }
 
     private func updateElapsed() {
@@ -498,6 +612,8 @@ final class GameViewModel: ObservableObject {
             counteredEventIDs = Set(countered)
         }
         bestEventStreak = UserDefaults.standard.integer(forKey: bestEventStreakKey)
+        solvedReactionCount = UserDefaults.standard.integer(forKey: solvedReactionCountKey)
+        wrongReactionCount = UserDefaults.standard.integer(forKey: wrongReactionCountKey)
         guard let data = UserDefaults.standard.data(forKey: sessionsKey),
               let decoded = try? JSONDecoder().decode([SessionRecord].self, from: data) else {
             return
@@ -517,6 +633,12 @@ final class GameViewModel: ObservableObject {
 
     private func persistCounteredEvents() {
         UserDefaults.standard.set(Array(counteredEventIDs), forKey: counteredEventsKey)
+        UserDefaults.standard.set(bestEventStreak, forKey: bestEventStreakKey)
+    }
+
+    private func persistReactionStats() {
+        UserDefaults.standard.set(solvedReactionCount, forKey: solvedReactionCountKey)
+        UserDefaults.standard.set(wrongReactionCount, forKey: wrongReactionCountKey)
         UserDefaults.standard.set(bestEventStreak, forKey: bestEventStreakKey)
     }
 

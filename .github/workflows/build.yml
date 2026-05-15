@@ -48,6 +48,9 @@ jobs:
       - name: Generate Xcode project
         run: xcodegen generate
 
+      - name: Capture current app screenshots
+        run: bash tools/capture_app_screenshots.sh
+
       - name: Set up ASC API Key
         env:
           ASC_API_KEY_CONTENT: ${{ secrets.ASC_API_KEY_CONTENT }}

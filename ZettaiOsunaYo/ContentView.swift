@@ -56,6 +56,7 @@ private struct ResistanceView: View {
                 DailyTrainingPanel()
                 ChallengePanel()
                 ModePicker()
+                ReactionCardPanel()
 
                 ButtonPanel(
                     buttonBreathes: buttonBreathes,
@@ -102,7 +103,7 @@ private struct HeaderPanel: View {
                 StatTile(title: "現在", value: game.elapsedText)
                 StatTile(title: "ベスト", value: game.bestText)
                 StatTile(title: "冷静", value: game.calmText)
-                StatTile(title: "対処", value: "\(game.counteredEventCount)/\(game.pressureEvents.count)")
+                StatTile(title: "判断", value: game.reactionScoreText)
             }
         }
     }
@@ -345,6 +346,61 @@ private struct ButtonPanel: View {
                     .foregroundStyle(.black)
             }
             .buttonStyle(.plain)
+        }
+        .panelStyle()
+    }
+}
+
+private struct ReactionCardPanel: View {
+    @EnvironmentObject private var game: GameViewModel
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("誘惑ジャッジ")
+                        .font(.headline.weight(.black))
+                        .foregroundStyle(.white)
+                    Text("状況を読んで、押さないための一手を選ぶ")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.white.opacity(0.58))
+                }
+                Spacer()
+                Label("\(game.solvedReactionCount)正解", systemImage: "checkmark.seal.fill")
+                    .font(.caption.weight(.heavy))
+                    .foregroundStyle(.green.opacity(0.92))
+            }
+
+            if let card = game.activeReactionCard {
+                Text(card.prompt)
+                    .font(.headline.weight(.heavy))
+                    .foregroundStyle(.white)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(12)
+                    .background(Color.white.opacity(0.07), in: RoundedRectangle(cornerRadius: 8))
+
+                HStack(spacing: 10) {
+                    ForEach(card.choices) { action in
+                        Button {
+                            game.answerReaction(action)
+                        } label: {
+                            Label(action.title, systemImage: action.iconName)
+                                .font(.caption.weight(.black))
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.72)
+                                .frame(maxWidth: .infinity, minHeight: 48)
+                                .background(.white, in: RoundedRectangle(cornerRadius: 8))
+                                .foregroundStyle(.black)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+
+                Text(game.reactionMessage)
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.white.opacity(0.62))
+            }
         }
         .panelStyle()
     }

@@ -8,15 +8,24 @@ struct ZettaiOsunaYoApp: App {
     @Environment(\.scenePhase) private var scenePhase
     @AppStorage("didRequestTrackingPermission") private var didRequestTrackingPermission = false
     @AppStorage("didStartMobileAds") private var didStartMobileAds = false
+    private let isScreenshotMode = ProcessInfo.processInfo.arguments.contains("--screenshot-mode")
+    private let screenshotPreset = ProcessInfo.processInfo.arguments
+        .first { $0.hasPrefix("--screenshot-preset=") }?
+        .replacingOccurrences(of: "--screenshot-preset=", with: "")
 
     var body: some Scene {
         WindowGroup {
             ContentView()
                 .environmentObject(game)
                 .onAppear {
+                    if isScreenshotMode {
+                        game.applyScreenshotPreset(screenshotPreset ?? "home")
+                        return
+                    }
                     requestTrackingPermissionIfNeeded()
                 }
                 .onChange(of: scenePhase) { _, phase in
+                    guard !isScreenshotMode else { return }
                     guard phase == .active else { return }
                     requestTrackingPermissionIfNeeded()
                 }
