@@ -86,9 +86,52 @@ final class GameViewModel: ObservableObject {
         let mode: Mode
         let seconds: Int
         let succeeded: Bool
+        let calmScore: Int?
+        let missionTitle: String?
 
         var resultText: String {
             succeeded ? "耐え抜いた" : "押した"
+        }
+    }
+
+    struct ChallengeMission: Identifiable, Equatable {
+        let id: String
+        let title: String
+        let detail: String
+        let mode: Mode
+        let targetSeconds: Int
+        let rewardTitle: String
+    }
+
+    enum CalmAction: String, CaseIterable, Identifiable {
+        case breathe
+        case lookAway
+        case count
+
+        var id: String { rawValue }
+
+        var title: String {
+            switch self {
+            case .breathe: "深呼吸"
+            case .lookAway: "目をそらす"
+            case .count: "3秒数える"
+            }
+        }
+
+        var iconName: String {
+            switch self {
+            case .breathe: "wind"
+            case .lookAway: "eye.slash.fill"
+            case .count: "timer"
+            }
+        }
+
+        var points: Int {
+            switch self {
+            case .breathe: 3
+            case .lookAway: 4
+            case .count: 5
+            }
         }
     }
 
@@ -96,14 +139,20 @@ final class GameViewModel: ObservableObject {
     @Published private(set) var elapsedSeconds: Int = 0
     @Published private(set) var pulseLevel: Double = 0
     @Published private(set) var sessions: [SessionRecord] = []
+    @Published private(set) var calmScore: Int = 0
+    @Published private(set) var calmActionCooldown: Int = 0
+    @Published private(set) var completedMissionIDs: Set<String> = []
+    @Published private(set) var activeMissionID: String?
     @Published var selectedMode: Mode = .thirty
 
     private let audioPlayer: AudioTauntPlaying
     private var startedAt = Date()
     private var tickTask: Task<Void, Never>?
     private var normalAudioTask: Task<Void, Never>?
+    private var lastCalmActionSecond = -99
     private let sessionsKey = "zettai.sessions.v2"
     private let modeKey = "zettai.selectedMode.v2"
+    private let completedMissionsKey = "zettai.completedMissions.v1"
 
     init(audioPlayer: AudioTauntPlaying) {
         self.audioPlayer = audioPlayer
@@ -140,7 +189,40 @@ final class GameViewModel: ObservableObject {
         Array(sessions.prefix(5))
     }
 
+    var missions: [ChallengeMission] {
+        [
+            ChallengeMission(id: "first-10", title: "初級 10秒", detail: "まずは短く。赤いボタンを見ても動かない。", mode: .thirty, targetSeconds: 10, rewardTitle: "冷静な親指"),
+            ChallengeMission(id: "first-30", title: "30秒の壁", detail: "煽りを聞きながら30秒耐える。", mode: .thirty, targetSeconds: 30, rewardTitle: "ボタン警戒員"),
+            ChallengeMission(id: "calm-45", title: "冷静キープ", detail: "押さないアクションを使いながら45秒。", mode: .classic, targetSeconds: 45, rewardTitle: "深呼吸マスター"),
+            ChallengeMission(id: "chaos-45", title: "煽り強め入門", detail: "圧が早く上がるモードで45秒。", mode: .chaos, targetSeconds: 45, rewardTitle: "耳を貸さない人"),
+            ChallengeMission(id: "minute", title: "1分耐久", detail: "1分を越えると、ボタンの存在感が変わる。", mode: .classic, targetSeconds: 60, rewardTitle: "鉄の指先"),
+            ChallengeMission(id: "endurance-90", title: "長期戦 90秒", detail: "急がず、押さず、淡々と耐える。", mode: .endurance, targetSeconds: 90, rewardTitle: "退室の達人"),
+            ChallengeMission(id: "chaos-120", title: "赤い誘惑", detail: "煽り強めで2分。ここからが本番。", mode: .chaos, targetSeconds: 120, rewardTitle: "不動の人"),
+            ChallengeMission(id: "endurance-180", title: "3分の静寂", detail: "限界耐久で3分。称号更新を狙う。", mode: .endurance, targetSeconds: 180, rewardTitle: "押さない達人")
+        ]
+    }
+
+    var activeMission: ChallengeMission? {
+        guard let activeMissionID else { return nil }
+        return missions.first { $0.id == activeMissionID }
+    }
+
+    var completedMissionCount: Int {
+        completedMissionIDs.count
+    }
+
+    var calmText: String {
+        "\(calmScore) pt"
+    }
+
+    var canUseCalmAction: Bool {
+        calmActionCooldown == 0 && state == .resisting
+    }
+
     var modeGoalText: String {
+        if let mission = activeMission {
+            return "\(mission.title): \(formatted(seconds: mission.targetSeconds))まで耐える"
+        }
         if let target = selectedMode.targetSeconds {
             "\(formatted(seconds: target))まで耐える"
         } else {
@@ -149,7 +231,7 @@ final class GameViewModel: ObservableObject {
     }
 
     var progress: Double {
-        guard let target = selectedMode.targetSeconds else {
+        guard let target = currentTargetSeconds else {
             return min(1, Double(elapsedSeconds) / 180.0)
         }
         return min(1, Double(elapsedSeconds) / Double(target))
@@ -177,7 +259,10 @@ final class GameViewModel: ObservableObject {
             ("1分", bestSeconds >= 60),
             ("3分", bestSeconds >= 180),
             ("5勝", clearCount >= 5),
-            ("10戦", sessions.count >= 10)
+            ("10戦", sessions.count >= 10),
+            ("冷静50", sessions.contains { ($0.calmScore ?? 0) >= 50 }),
+            ("任務4", completedMissionCount >= 4),
+            ("全任務", completedMissionCount >= missions.count)
         ]
     }
 
@@ -186,15 +271,33 @@ final class GameViewModel: ObservableObject {
         startedAt = Date()
         elapsedSeconds = 0
         pulseLevel = 0
+        calmScore = 0
+        calmActionCooldown = 0
+        lastCalmActionSecond = -99
         audioPlayer.stopLoop()
         startClock()
         startNormalAudioLoop()
     }
 
     func chooseMode(_ mode: Mode) {
+        activeMissionID = nil
         selectedMode = mode
         UserDefaults.standard.set(mode.rawValue, forKey: modeKey)
         start()
+    }
+
+    func startMission(_ mission: ChallengeMission) {
+        activeMissionID = mission.id
+        selectedMode = mission.mode
+        UserDefaults.standard.set(mission.mode.rawValue, forKey: modeKey)
+        start()
+    }
+
+    func performCalmAction(_ action: CalmAction) {
+        guard canUseCalmAction else { return }
+        lastCalmActionSecond = elapsedSeconds
+        calmScore += action.points
+        updateElapsed()
     }
 
     func pressForbiddenButton() {
@@ -216,12 +319,18 @@ final class GameViewModel: ObservableObject {
 
     func resetProgress() {
         sessions = []
+        completedMissionIDs = []
         persistSessions()
+        persistCompletedMissions()
         start()
     }
 
     private func completeChallenge() {
         state = .survived
+        if let activeMission, elapsedSeconds >= activeMission.targetSeconds {
+            completedMissionIDs.insert(activeMission.id)
+            persistCompletedMissions()
+        }
         saveSession(succeeded: true)
         tickTask?.cancel()
         normalAudioTask?.cancel()
@@ -235,7 +344,7 @@ final class GameViewModel: ObservableObject {
                 try? await Task.sleep(for: .seconds(0.25))
                 guard let self else { return }
                 self.updateElapsed()
-                if let target = self.selectedMode.targetSeconds, self.elapsedSeconds >= target {
+                if let target = self.currentTargetSeconds, self.elapsedSeconds >= target {
                     self.completeChallenge()
                     return
                 }
@@ -258,8 +367,14 @@ final class GameViewModel: ObservableObject {
 
     private func updateElapsed() {
         elapsedSeconds = max(0, Int(Date().timeIntervalSince(startedAt)))
+        calmActionCooldown = max(0, 6 - (elapsedSeconds - lastCalmActionSecond))
         let scaled = Double(elapsedSeconds) * selectedMode.pressureScale
-        pulseLevel = min(1, scaled / 180.0)
+        let calmReduction = Double(calmScore) * 3.0
+        pulseLevel = min(1, max(0, scaled - calmReduction) / 180.0)
+    }
+
+    private var currentTargetSeconds: Int? {
+        activeMission?.targetSeconds ?? selectedMode.targetSeconds
     }
 
     private func nextNormalDelay() -> Double {
@@ -284,7 +399,9 @@ final class GameViewModel: ObservableObject {
             date: Date(),
             mode: selectedMode,
             seconds: elapsedSeconds,
-            succeeded: succeeded
+            succeeded: succeeded,
+            calmScore: calmScore,
+            missionTitle: activeMission?.title
         )
         sessions.insert(record, at: 0)
         sessions = Array(sessions.prefix(30))
@@ -295,6 +412,9 @@ final class GameViewModel: ObservableObject {
         if let rawMode = UserDefaults.standard.string(forKey: modeKey),
            let mode = Mode(rawValue: rawMode) {
             selectedMode = mode
+        }
+        if let completed = UserDefaults.standard.array(forKey: completedMissionsKey) as? [String] {
+            completedMissionIDs = Set(completed)
         }
         guard let data = UserDefaults.standard.data(forKey: sessionsKey),
               let decoded = try? JSONDecoder().decode([SessionRecord].self, from: data) else {
@@ -307,6 +427,10 @@ final class GameViewModel: ObservableObject {
         if let data = try? JSONEncoder().encode(sessions) {
             UserDefaults.standard.set(data, forKey: sessionsKey)
         }
+    }
+
+    private func persistCompletedMissions() {
+        UserDefaults.standard.set(Array(completedMissionIDs), forKey: completedMissionsKey)
     }
 
     func formatted(seconds: Int) -> String {

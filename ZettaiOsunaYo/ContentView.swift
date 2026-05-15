@@ -53,6 +53,7 @@ private struct ResistanceView: View {
         ScrollView(showsIndicators: false) {
             VStack(spacing: 18) {
                 HeaderPanel()
+                ChallengePanel()
                 ModePicker()
 
                 ButtonPanel(
@@ -60,6 +61,7 @@ private struct ResistanceView: View {
                     warningFlicker: warningFlicker
                 )
 
+                CalmActionPanel()
                 ProgressPanel()
                 AchievementPanel()
                 HistoryPanel()
@@ -97,9 +99,93 @@ private struct HeaderPanel: View {
             HStack(spacing: 10) {
                 StatTile(title: "現在", value: game.elapsedText)
                 StatTile(title: "ベスト", value: game.bestText)
-                StatTile(title: "称号", value: game.rankTitle)
+                StatTile(title: "冷静", value: game.calmText)
+                StatTile(title: "任務", value: "\(game.completedMissionCount)/\(game.missions.count)")
             }
         }
+    }
+}
+
+private struct ChallengePanel: View {
+    @EnvironmentObject private var game: GameViewModel
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(alignment: .firstTextBaseline) {
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("チャレンジ任務")
+                        .font(.headline.weight(.black))
+                        .foregroundStyle(.white)
+                    Text("順番にクリアして称号を集める")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.white.opacity(0.58))
+                }
+                Spacer()
+                Text(game.rankTitle)
+                    .font(.caption.weight(.heavy))
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 9)
+                    .padding(.vertical, 6)
+                    .background(Color.white.opacity(0.1), in: RoundedRectangle(cornerRadius: 8))
+            }
+
+            LazyVGrid(columns: [GridItem(.adaptive(minimum: 180), spacing: 10)], spacing: 10) {
+                ForEach(game.missions) { mission in
+                    MissionButton(mission: mission)
+                }
+            }
+        }
+        .panelStyle()
+    }
+}
+
+private struct MissionButton: View {
+    @EnvironmentObject private var game: GameViewModel
+    let mission: GameViewModel.ChallengeMission
+
+    private var isActive: Bool {
+        game.activeMissionID == mission.id
+    }
+
+    private var isComplete: Bool {
+        game.completedMissionIDs.contains(mission.id)
+    }
+
+    var body: some View {
+        Button {
+            game.startMission(mission)
+        } label: {
+            VStack(alignment: .leading, spacing: 7) {
+                HStack {
+                    Image(systemName: isComplete ? "checkmark.seal.fill" : "flag.checkered")
+                    Text(mission.title)
+                        .lineLimit(1)
+                    Spacer(minLength: 6)
+                    Text(game.formatted(seconds: mission.targetSeconds))
+                        .font(.caption.monospacedDigit().weight(.black))
+                }
+                .font(.subheadline.weight(.black))
+                .foregroundStyle(.white)
+
+                Text(mission.detail)
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.white.opacity(0.62))
+                    .lineLimit(2)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                Text(mission.rewardTitle)
+                    .font(.caption2.weight(.heavy))
+                    .foregroundStyle(isComplete ? .green : .white.opacity(0.48))
+            }
+            .frame(maxWidth: .infinity, minHeight: 104, alignment: .topLeading)
+            .padding(12)
+            .background(isActive ? Color.red.opacity(0.42) : Color.white.opacity(isComplete ? 0.12 : 0.07), in: RoundedRectangle(cornerRadius: 8))
+            .overlay {
+                RoundedRectangle(cornerRadius: 8)
+                    .stroke(isActive ? Color.white.opacity(0.5) : Color.white.opacity(0.12), lineWidth: 1)
+            }
+        }
+        .buttonStyle(.plain)
     }
 }
 
@@ -213,6 +299,57 @@ private struct ButtonPanel: View {
     }
 }
 
+private struct CalmActionPanel: View {
+    @EnvironmentObject private var game: GameViewModel
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("押さないための行動")
+                        .font(.headline.weight(.black))
+                        .foregroundStyle(.white)
+                    Text("使うと冷静ポイントが増え、緊張ゲージの上昇を少し抑える")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.white.opacity(0.58))
+                }
+                Spacer()
+                if game.calmActionCooldown > 0 {
+                    Text("\(game.calmActionCooldown)秒")
+                        .font(.caption.monospacedDigit().weight(.black))
+                        .foregroundStyle(.white.opacity(0.7))
+                }
+            }
+
+            HStack(spacing: 10) {
+                ForEach(GameViewModel.CalmAction.allCases) { action in
+                    Button {
+                        game.performCalmAction(action)
+                    } label: {
+                        VStack(spacing: 6) {
+                            Image(systemName: action.iconName)
+                                .font(.title3.weight(.bold))
+                            Text(action.title)
+                                .font(.caption.weight(.heavy))
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.72)
+                            Text("+\(action.points)")
+                                .font(.caption2.monospacedDigit().weight(.black))
+                                .foregroundStyle(.white.opacity(0.56))
+                        }
+                        .frame(maxWidth: .infinity, minHeight: 78)
+                        .background(game.canUseCalmAction ? Color.white.opacity(0.1) : Color.white.opacity(0.045), in: RoundedRectangle(cornerRadius: 8))
+                        .foregroundStyle(game.canUseCalmAction ? .white : .white.opacity(0.42))
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(!game.canUseCalmAction)
+                }
+            }
+        }
+        .panelStyle()
+    }
+}
+
 private struct ProgressPanel: View {
     @EnvironmentObject private var game: GameViewModel
 
@@ -308,9 +445,18 @@ private struct HistoryPanel: View {
                         Text(session.mode.shortTitle)
                             .font(.subheadline.weight(.heavy))
                             .foregroundStyle(.white)
+                        if let missionTitle = session.missionTitle {
+                            Text(missionTitle)
+                                .font(.caption.weight(.semibold))
+                                .foregroundStyle(.white.opacity(0.48))
+                                .lineLimit(1)
+                        }
                         Spacer()
                         Text(session.resultText)
                             .foregroundStyle(.white.opacity(0.62))
+                        Text("+\(session.calmScore ?? 0)")
+                            .font(.caption.monospacedDigit().weight(.heavy))
+                            .foregroundStyle(.white.opacity(0.48))
                         Text(game.formatted(seconds: session.seconds))
                             .font(.subheadline.monospacedDigit().weight(.heavy))
                             .foregroundStyle(.white)

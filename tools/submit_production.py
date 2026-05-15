@@ -27,32 +27,32 @@ META = {
     "ja": {
         "description": """押すなと言われるほど、押したくなる。
 
-「絶対押すなよ」は、大きな赤いボタンを前にして、押さずに耐えるミニゲームです。
+「絶対押すなよ」は、大きな赤いボタンを前にして、押さずに耐えるチャレンジゲームです。
 
-30秒チャレンジ、クラシック、限界耐久、煽り強めの4モードを収録。タイマー、緊張ゲージ、ランダム音声、失敗時のリアクションで、短い待ち時間でも遊べます。
+ステージ制のチャレンジ任務、30秒チャレンジ、クラシック、限界耐久、煽り強めの4モードを収録。深呼吸、目をそらす、3秒数えるなど、押さないための行動も選べます。
 
-ベストタイム、最近の挑戦、勝利数、押してしまった回数、称号、実績も保存。次はもう少し耐えたい、と思える記録型のネタゲームです。
+ベストタイム、最近の挑戦、勝利数、押してしまった回数、冷静ポイント、称号、実績、任務の達成状況を保存。次はもう少し耐えたい、と思える記録型のネタゲームです。
 
 友だちとの勝負、暇つぶし、自制心チェックにどうぞ。""",
-        "keywords": "押すな,赤いボタン,ミニゲーム,暇つぶし,音声,タイマー,実績,記録,自制心",
-        "whatsNew": "4つのチャレンジモード、実績、称号、ベストタイム、最近の挑戦履歴を追加しました。",
-        "promotionalText": "押すな。絶対に押すな。4つのモードで何秒耐えられる？",
+        "keywords": "押すな,赤いボタン,ゲーム,暇つぶし,音声,タイマー,実績,記録,自制心",
+        "whatsNew": "ステージ制のチャレンジ任務、押さないための行動、冷静ポイント、任務の達成状況を追加しました。",
+        "promotionalText": "押すな。絶対に押すな。任務をクリアして、何秒耐えられる？",
         "marketingUrl": "https://snarfnet.github.io/",
         "supportUrl": "https://snarfnet.github.io/",
     },
     "en-US": {
         "description": """The more you are told not to press it, the more tempting it gets.
 
-Don't Press It is a small challenge game built around one giant red button. Your goal is simple: resist.
+Don't Press It is a challenge game built around one giant red button. Your goal is simple: resist.
 
-Play four modes: 30-second challenge, classic, endurance, and high-pressure chaos. The app tracks time, raises tension, plays random voice reactions, and records what happened when you finally give in.
+Clear staged missions, or play four modes: 30-second challenge, classic, endurance, and high-pressure chaos. Use calm actions like breathing, looking away, and counting to resist the temptation.
 
-Best time, recent attempts, wins, presses, rank titles, and achievements are saved in the app, giving each short round a reason to try again.
+Best time, recent attempts, wins, presses, calm points, rank titles, achievements, and mission progress are saved in the app, giving each short round a reason to try again.
 
 Use it for quick laughs, waiting time, friendly challenges, or a tiny test of self-control.""",
-        "keywords": "button,red button,mini game,challenge,voice,timer,achievements,records,self control",
-        "whatsNew": "Added four challenge modes, achievements, rank titles, best time, and recent attempt history.",
-        "promotionalText": "Do not press it. Four modes. One red button. How long can you last?",
+        "keywords": "button,red button,game,challenge,voice,timer,achievements,records,self control",
+        "whatsNew": "Added staged missions, calm actions, calm points, and mission progress tracking.",
+        "promotionalText": "Do not press it. Clear missions. One red button. How long can you last?",
         "marketingUrl": "https://snarfnet.github.io/",
         "supportUrl": "https://snarfnet.github.io/",
     },
@@ -268,7 +268,8 @@ def ensure_review_detail(version_id):
         "demoAccountRequired": False,
         "notes": (
             "No login is required. The app does not call any external API. "
-            "The app now includes four challenge modes, best-time tracking, achievements, recent session history, "
+            "The app now includes staged challenge missions, calm actions the user can choose during play, calm points, "
+            "mission completion tracking, four challenge modes, best-time tracking, achievements, recent session history, "
             "rank titles, and bundled voice reactions played with AVAudioPlayer. "
             "This build requests App Tracking Transparency permission shortly after first launch. "
             "Google Mobile Ads SDK is started only after the ATT flow completes or if the user has already made a tracking choice."
