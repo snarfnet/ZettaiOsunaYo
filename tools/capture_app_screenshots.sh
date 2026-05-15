@@ -55,6 +55,35 @@ capture_set() {
   done
 }
 
+normalize_folder() {
+  local folder="$1"
+  local width="$2"
+  local height="$3"
+  python3 - "$OUT/$folder" "$width" "$height" <<'PY'
+from pathlib import Path
+from PIL import Image
+import sys
+
+folder = Path(sys.argv[1])
+target = (int(sys.argv[2]), int(sys.argv[3]))
+
+def cover(im, size):
+    w, h = im.size
+    tw, th = size
+    scale = max(tw / w, th / h)
+    resized = im.resize((round(w * scale), round(h * scale)), Image.Resampling.LANCZOS)
+    left = (resized.width - tw) // 2
+    top = (resized.height - th) // 2
+    return resized.crop((left, top, left + tw, top + th))
+
+for path in sorted(folder.glob("*.png")):
+    im = Image.open(path).convert("RGB")
+    if im.size != target:
+        cover(im, target).save(path)
+        print(f"normalized {path} -> {target}")
+PY
+}
+
 rm -rf "$DERIVED"
 xcodebuild build \
   -project ZettaiOsunaYo.xcodeproj \
@@ -86,5 +115,9 @@ capture_set "iphone_55" "$IPHONE_55"
 
 boot_device "$IPAD_129"
 capture_set "ipad_129" "$IPAD_129"
+
+normalize_folder "iphone_65" 1242 2688
+normalize_folder "iphone_55" 1242 2208
+normalize_folder "ipad_129" 2048 2732
 
 xcrun simctl shutdown all >/dev/null 2>&1 || true
