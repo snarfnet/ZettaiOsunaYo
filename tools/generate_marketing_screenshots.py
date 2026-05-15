@@ -3,8 +3,6 @@ from PIL import Image, ImageDraw, ImageFont, ImageFilter
 
 
 ROOT = Path(__file__).resolve().parents[1]
-BACKDROP = ROOT / "MarketingAssets" / "Backgrounds" / "screenshot-backdrop-imagegen.png"
-BUTTON_ASSET = ROOT / "MarketingAssets" / "Buttons" / "real-button.png"
 OUT = ROOT / "MarketingAssets" / "Screenshots"
 FONT = Path("C:/Windows/Fonts/NotoSansJP-VF.ttf")
 FONT_FALLBACK = Path("C:/Windows/Fonts/yumindb.ttf")
@@ -20,43 +18,58 @@ DEVICES = {
 SCENES = [
     {
         "name": "01-home",
-        "headline": "押すなと言われたら",
-        "sub": "赤いボタンを前に、耐えるだけなのに妙に悔しい。",
-        "mode": "30秒チャレンジ",
-        "timer": "00:12",
-        "status": "まだ見てるだけ",
+        "state": "playing",
+        "timer": "00:18",
+        "best": "01:12",
+        "calm": "24 pt",
+        "event": "赤い点滅",
+        "event_detail": "深呼吸でゲージを落ち着かせる",
+        "action": "深呼吸",
+        "progress": 0.60,
     },
     {
-        "name": "02-modes",
-        "headline": "4つの遊び方",
-        "sub": "短時間、長期戦、煽り強め。気分でモードを選べます。",
-        "mode": "モード選択",
-        "timer": "通常  30秒  耐久  強め",
-        "status": "今日はどれで耐える？",
+        "name": "02-missions",
+        "state": "missions",
+        "timer": "00:00",
+        "best": "03:18",
+        "calm": "0 pt",
+        "event": "今日の修行",
+        "event_detail": "日替わり3本をクリア",
+        "action": "任務",
+        "progress": 0.20,
     },
     {
-        "name": "03-achievements",
-        "headline": "記録と実績",
-        "sub": "ベストタイム、称号、最近の挑戦をアプリ内に保存。",
-        "mode": "押さない達人",
-        "timer": "BEST 03:18",
-        "status": "30秒 / 1分 / 3分 / 5勝",
+        "name": "03-actions",
+        "state": "actions",
+        "timer": "01:04",
+        "best": "03:18",
+        "calm": "56 pt",
+        "event": "指が近い",
+        "event_detail": "目をそらして誘惑を切る",
+        "action": "目をそらす",
+        "progress": 0.75,
     },
     {
         "name": "04-failed",
-        "headline": "押したら負け",
-        "sub": "失敗も記録。次はもう少しだけ耐えたくなる。",
-        "mode": "押したな",
+        "state": "failed",
         "timer": "00:24",
-        "status": "やると思った。でも記録は残した。",
+        "best": "03:18",
+        "calm": "18 pt",
+        "event": "押したな",
+        "event_detail": "失敗も記録。次はもう少し耐える。",
+        "action": "失敗",
+        "progress": 0.36,
     },
     {
         "name": "05-survived",
-        "headline": "耐え抜いた",
-        "sub": "退室または目標達成で記録。次の称号を狙えます。",
-        "mode": "目標達成",
+        "state": "survived",
         "timer": "03:00",
-        "status": "ベスト更新",
+        "best": "03:18",
+        "calm": "91 pt",
+        "event": "耐え抜いた",
+        "event_detail": "任務クリア。称号と履歴を保存。",
+        "action": "達成",
+        "progress": 1.0,
     },
 ]
 
@@ -66,132 +79,165 @@ def font(size: int) -> ImageFont.FreeTypeFont:
     return ImageFont.truetype(str(path), size=size)
 
 
-def fit_text(draw, text, max_width, start_size, min_size):
-    size = start_size
-    while size >= min_size:
+def fit(draw, text, max_width, start, minimum):
+    size = start
+    while size >= minimum:
         candidate = font(size)
         if draw.textbbox((0, 0), text, font=candidate)[2] <= max_width:
             return candidate
         size -= 2
-    return font(min_size)
+    return font(minimum)
 
 
-def cover(image: Image.Image, size):
-    w, h = image.size
-    tw, th = size
-    scale = max(tw / w, th / h)
-    resized = image.resize((int(w * scale), int(h * scale)), Image.Resampling.LANCZOS)
-    left = (resized.width - tw) // 2
-    top = (resized.height - th) // 2
-    return resized.crop((left, top, left + tw, top + th))
+def panel(draw, xy, scale, fill=(13, 13, 16, 255)):
+    draw.rounded_rectangle(xy, radius=int(8 * scale), fill=fill, outline=(54, 54, 62, 255), width=max(1, int(1.5 * scale)))
 
 
-def draw_panel(draw, xy, radius, fill=(0, 0, 0, 150)):
-    draw.rounded_rectangle(xy, radius=radius, fill=fill, outline=(255, 255, 255, 32), width=2)
+def background(size, intensity):
+    w, h = size
+    base = Image.new("RGBA", size, (5, 5, 7, 255))
+    glow = Image.new("RGBA", size, (0, 0, 0, 0))
+    gd = ImageDraw.Draw(glow)
+    center = (w // 2, int(h * 0.35))
+    for i in range(18, 0, -1):
+        r = int(max(w, h) * i / 18)
+        alpha = int((3 + intensity * 7) * i)
+        gd.ellipse((center[0] - r, center[1] - r, center[0] + r, center[1] + r), fill=(180, 0, 0, alpha))
+    base.alpha_composite(glow.filter(ImageFilter.GaussianBlur(max(18, w // 20))))
+    draw = ImageDraw.Draw(base)
+    stripe_gap = max(14, int(h * 0.018))
+    for y in range(0, h, stripe_gap):
+        draw.rectangle((0, y, w, y + 2), fill=(48, 8, 8, 255))
+    return base
 
 
-def draw_button(base, cx, cy, radius):
+def draw_stat(draw, xy, title, value, scale):
+    panel(draw, xy, scale, (30, 30, 34, 255))
+    x1, y1, x2, y2 = xy
+    draw.text(((x1 + x2) / 2, y1 + int(13 * scale)), title, font=font(int(18 * scale)), anchor="mt", fill=(150, 150, 158, 255))
+    value_font = fit(draw, value, x2 - x1 - int(12 * scale), int(27 * scale), int(17 * scale))
+    draw.text(((x1 + x2) / 2, y1 + int(45 * scale)), value, font=value_font, anchor="mt", fill=(245, 245, 248, 255))
+
+
+def draw_button(base, cx, cy, r, scale, label="押すな"):
     glow = Image.new("RGBA", base.size, (0, 0, 0, 0))
     gd = ImageDraw.Draw(glow)
-    for i in range(9, 0, -1):
-        r = int(radius * (1 + i * 0.15))
-        gd.ellipse((cx - r, cy - r, cx + r, cy + r), fill=(255, 0, 0, 15 * i))
-    base.alpha_composite(glow.filter(ImageFilter.GaussianBlur(radius // 4)))
-
-    if BUTTON_ASSET.exists():
-        button = Image.open(BUTTON_ASSET).convert("RGBA")
-        button.thumbnail((radius * 2, radius * 2), Image.Resampling.LANCZOS)
-        base.alpha_composite(button, (int(cx - button.width / 2), int(cy - button.height / 2)))
-        return
-
+    for i in range(7, 0, -1):
+        rr = int(r * (1 + i * 0.17))
+        gd.ellipse((cx - rr, cy - rr, cx + rr, cy + rr), fill=(255, 0, 0, 13 * i))
+    base.alpha_composite(glow.filter(ImageFilter.GaussianBlur(max(12, int(r * 0.22)))))
     draw = ImageDraw.Draw(base)
-    draw.ellipse((cx - radius, cy - radius, cx + radius, cy + radius), fill=(112, 0, 0, 255))
-    inset = radius // 10
-    draw.ellipse((cx - radius + inset, cy - radius + inset, cx + radius - inset, cy + radius - inset), fill=(230, 8, 6, 255))
-    draw.ellipse((cx - radius // 2, cy - radius // 2, cx + radius // 4, cy - radius // 8), fill=(255, 130, 120, 72))
+    draw.ellipse((cx - r, cy - r, cx + r, cy + r), fill=(95, 0, 0, 255), outline=(255, 255, 255, 55), width=max(2, int(3 * scale)))
+    inset = int(r * 0.11)
+    draw.ellipse((cx - r + inset, cy - r + inset, cx + r - inset, cy + r - inset), fill=(232, 12, 10, 255))
+    draw.ellipse((cx - int(r * 0.48), cy - int(r * 0.58), cx + int(r * 0.16), cy - int(r * 0.12)), fill=(255, 155, 140, 80))
+    draw.text((cx, cy - int(8 * scale)), label, font=font(int(55 * scale)), anchor="mm", fill=(255, 255, 255, 255))
+    draw.text((cx, cy + int(44 * scale)), "DON'T", font=font(int(20 * scale)), anchor="mm", fill=(255, 255, 255, 180))
 
 
-def draw_tile(draw, xy, title, value, scale):
-    draw_panel(draw, xy, int(8 * scale), (255, 255, 255, 24))
+def mission_tile(draw, xy, title, detail, time_text, done, active, scale):
+    fill = (112, 22, 20, 255) if active else ((30, 45, 34, 255) if done else (27, 27, 31, 255))
+    panel(draw, xy, scale, fill)
     x1, y1, x2, y2 = xy
-    draw.text(((x1 + x2) / 2, y1 + 18 * scale), title, font=font(int(22 * scale)), anchor="mt", fill=(255, 255, 255, 145))
-    value_font = fit_text(draw, value, x2 - x1 - 20 * scale, int(34 * scale), int(20 * scale))
-    draw.text(((x1 + x2) / 2, y1 + 55 * scale), value, font=value_font, anchor="mt", fill=(255, 255, 255, 255))
+    mark = "✓" if done else "○"
+    draw.text((x1 + int(12 * scale), y1 + int(12 * scale)), mark, font=font(int(22 * scale)), fill=(120, 255, 150, 255) if done else (165, 165, 172, 255))
+    draw.text((x1 + int(40 * scale), y1 + int(12 * scale)), title, font=font(int(21 * scale)), fill=(248, 248, 250, 255))
+    draw.text((x1 + int(12 * scale), y1 + int(48 * scale)), detail, font=font(int(16 * scale)), fill=(174, 174, 182, 255))
+    draw.text((x2 - int(12 * scale), y2 - int(12 * scale)), time_text, font=font(int(17 * scale)), anchor="rb", fill=(215, 215, 222, 255))
 
 
-def draw_ui(base, scene):
-    w, h = base.size
+def action_button(draw, xy, title, points, active, scale):
+    fill = (245, 245, 248, 255) if active else (31, 31, 36, 255)
+    text = (15, 15, 18, 255) if active else (255, 255, 255, 230)
+    draw.rounded_rectangle(xy, radius=int(8 * scale), fill=fill)
+    x1, y1, x2, y2 = xy
+    draw.text(((x1 + x2) / 2, y1 + int(18 * scale)), title, font=font(int(21 * scale)), anchor="mt", fill=text)
+    draw.text(((x1 + x2) / 2, y1 + int(57 * scale)), f"+{points}", font=font(int(17 * scale)), anchor="mt", fill=text)
+
+
+def draw_screen(scene, size):
+    w, h = size
     scale = w / 1320
+    base = background(size, scene["progress"])
     draw = ImageDraw.Draw(base)
-    ad_h = int(h * 0.064)
-    bottom = h - ad_h - int(30 * scale)
-    margin = int(w * 0.07)
+    ad_h = int(54 * scale)
+    content_w = min(w - int(54 * scale), int(860 * scale))
+    left = (w - content_w) // 2
+    right = left + content_w
+    y = int(58 * scale)
 
-    draw.rectangle((0, h - ad_h, w, h), fill=(4, 4, 5, 238))
-    draw.rectangle((0, h - ad_h, w, h - ad_h + 2), fill=(255, 255, 255, 28))
+    draw.text((w / 2, y), "絶対押すなよ", font=fit(draw, "絶対押すなよ", content_w, int(48 * scale), int(32 * scale)), anchor="mt", fill=(255, 255, 255, 255))
+    draw.text((w / 2, y + int(62 * scale)), "赤いボタンを押さずに、任務とイベントを越える。", font=font(int(22 * scale)), anchor="mt", fill=(196, 196, 204, 255))
+    y += int(120 * scale)
 
-    top = int(h * 0.075)
-    headline_font = fit_text(draw, scene["headline"], w - margin * 2, int(72 * scale), int(46 * scale))
-    sub_font = fit_text(draw, scene["sub"], w - margin * 2, int(34 * scale), int(25 * scale))
-    draw.text((margin, top), scene["headline"], font=headline_font, fill=(255, 255, 255, 255))
-    draw.text((margin, top + int(95 * scale)), scene["sub"], font=sub_font, fill=(235, 226, 220, 218))
+    gap = int(10 * scale)
+    stat_w = (content_w - gap * 3) // 4
+    for i, (title, value) in enumerate([("現在", scene["timer"]), ("ベスト", scene["best"]), ("冷静", scene["calm"]), ("対処", "4/6")]):
+        x = left + i * (stat_w + gap)
+        draw_stat(draw, (x, y, x + stat_w, y + int(75 * scale)), title, value, scale)
+    y += int(93 * scale)
 
-    panel_top = int(h * 0.22)
-    panel_margin = int(w * 0.055)
-    draw_panel(draw, (panel_margin, panel_top, w - panel_margin, bottom), int(18 * scale))
+    panel(draw, (left, y, right, y + int(150 * scale)), scale)
+    draw.text((left + int(16 * scale), y + int(14 * scale)), "今日の修行", font=font(int(25 * scale)), fill=(255, 255, 255, 250))
+    draw.text((right - int(16 * scale), y + int(16 * scale)), "1/3", font=font(int(25 * scale)), anchor="rt", fill=(255, 255, 255, 230))
+    tile_y = y + int(54 * scale)
+    tile_w = (content_w - int(52 * scale)) // 3
+    missions = [("初級 10秒", "短く耐える", "00:10"), ("冷静キープ", "行動を使う", "00:45"), ("1分耐久", "称号を狙う", "01:00")]
+    for i, item in enumerate(missions):
+        x = left + int(16 * scale) + i * (tile_w + int(10 * scale))
+        mission_tile(draw, (x, tile_y, x + tile_w, tile_y + int(78 * scale)), item[0], item[1], item[2], i == 0, i == 1 and scene["state"] == "missions", scale)
+    y += int(168 * scale)
 
-    tile_top = panel_top + int(35 * scale)
-    gap = int(12 * scale)
-    tile_w = int((w - panel_margin * 2 - gap * 4) / 3)
-    x = panel_margin + gap
-    draw_tile(draw, (x, tile_top, x + tile_w, tile_top + int(105 * scale)), "現在", scene["timer"], scale)
-    x += tile_w + gap
-    draw_tile(draw, (x, tile_top, x + tile_w, tile_top + int(105 * scale)), "ベスト", "03:18", scale)
-    x += tile_w + gap
-    draw_tile(draw, (x, tile_top, x + tile_w, tile_top + int(105 * scale)), "称号", scene["mode"], scale)
+    if scene["state"] in ("missions", "actions"):
+        panel(draw, (left, y, right, y + int(190 * scale)), scale)
+        draw.text((left + int(16 * scale), y + int(14 * scale)), "チャレンジ任務", font=font(int(25 * scale)), fill=(255, 255, 255, 250))
+        grid_y = y + int(54 * scale)
+        grid_w = (content_w - int(42 * scale)) // 2
+        mission_tile(draw, (left + int(16 * scale), grid_y, left + int(16 * scale) + grid_w, grid_y + int(112 * scale)), "30秒の壁", "煽りを聞きながら耐える", "00:30", True, False, scale)
+        mission_tile(draw, (left + int(26 * scale) + grid_w, grid_y, right - int(16 * scale), grid_y + int(112 * scale)), "赤い誘惑", "強めで2分", "02:00", False, True, scale)
+        y += int(208 * scale)
 
-    button_y = int(panel_top + (bottom - panel_top) * 0.48)
-    draw_button(base, w // 2, button_y, int(w * 0.18))
-    button_font = font(int(70 * scale))
-    draw.text((w / 2, button_y - int(12 * scale)), "押すな", font=button_font, anchor="mm", fill=(255, 255, 255, 255))
-    draw.text((w / 2, button_y + int(48 * scale)), "DON'T", font=font(int(28 * scale)), anchor="mm", fill=(255, 255, 255, 185))
+    button_r = int(145 * scale if scene["state"] in ("missions", "actions") else 168 * scale)
+    button_y = y + button_r + int(18 * scale)
+    draw_button(base, w // 2, button_y, button_r, scale)
+    draw.text((w / 2, button_y + button_r + int(34 * scale)), "30秒の壁: 00:30まで耐える", font=font(int(24 * scale)), anchor="mt", fill=(255, 255, 255, 200))
+    y = button_y + button_r + int(78 * scale)
 
-    status_font = fit_text(draw, scene["status"], w - margin * 2, int(38 * scale), int(25 * scale))
-    draw.text((w / 2, button_y + int(w * 0.245)), scene["status"], font=status_font, anchor="mm", fill=(255, 255, 255, 210))
+    panel(draw, (left, y, right, y + int(112 * scale)), scale, (82, 0, 0, 255) if scene["state"] != "survived" else (0, 66, 36, 255))
+    draw.text((left + int(16 * scale), y + int(12 * scale)), "緊急イベント", font=font(int(24 * scale)), fill=(255, 255, 255, 250))
+    draw.text((right - int(16 * scale), y + int(15 * scale)), "最高5コンボ", font=font(int(18 * scale)), anchor="rt", fill=(255, 230, 110, 255))
+    draw.text((left + int(16 * scale), y + int(52 * scale)), scene["event"], font=font(int(27 * scale)), fill=(255, 255, 255, 255))
+    draw.text((left + int(16 * scale), y + int(86 * scale)), scene["event_detail"], font=font(int(18 * scale)), fill=(205, 205, 212, 255))
+    y += int(128 * scale)
 
-    bar_x1 = panel_margin + int(42 * scale)
-    bar_x2 = w - panel_margin - int(42 * scale)
-    bar_y = bottom - int(205 * scale)
-    draw.rounded_rectangle((bar_x1, bar_y, bar_x2, bar_y + int(18 * scale)), radius=int(9 * scale), fill=(255, 255, 255, 35))
-    fill_w = int((bar_x2 - bar_x1) * (0.42 if scene["name"] == "01-home" else 0.82))
-    draw.rounded_rectangle((bar_x1, bar_y, bar_x1 + fill_w, bar_y + int(18 * scale)), radius=int(9 * scale), fill=(255, 70, 45, 230))
+    panel(draw, (left, y, right, y + int(126 * scale)), scale)
+    draw.text((left + int(16 * scale), y + int(12 * scale)), "押さないための行動", font=font(int(24 * scale)), fill=(255, 255, 255, 250))
+    action_y = y + int(52 * scale)
+    action_w = (content_w - int(52 * scale)) // 3
+    for i, (title, points) in enumerate([("深呼吸", 3), ("目をそらす", 4), ("3秒数える", 5)]):
+        x = left + int(16 * scale) + i * (action_w + int(10 * scale))
+        action_button(draw, (x, action_y, x + action_w, action_y + int(58 * scale)), title, points, title == scene["action"], scale)
+    y += int(142 * scale)
 
-    badges = ["30秒", "1分", "3分", "5勝"]
-    badge_y = bottom - int(145 * scale)
-    badge_w = int((bar_x2 - bar_x1 - gap * 3) / 4)
-    for idx, badge in enumerate(badges):
-        bx = bar_x1 + idx * (badge_w + gap)
-        fill = (255, 70, 45, 95) if idx < 3 else (255, 255, 255, 35)
-        draw.rounded_rectangle((bx, badge_y, bx + badge_w, badge_y + int(58 * scale)), radius=int(8 * scale), fill=fill)
-        draw.text((bx + badge_w / 2, badge_y + int(29 * scale)), badge, font=font(int(24 * scale)), anchor="mm", fill=(255, 255, 255, 230))
+    bar_y = y + int(10 * scale)
+    draw.text((left, bar_y - int(30 * scale)), "緊張ゲージ", font=font(int(23 * scale)), fill=(255, 255, 255, 245))
+    draw.text((right, bar_y - int(30 * scale)), f"{int(scene['progress'] * 100)}%", font=font(int(23 * scale)), anchor="rt", fill=(255, 100, 70, 245))
+    draw.rounded_rectangle((left, bar_y, right, bar_y + int(14 * scale)), radius=int(7 * scale), fill=(40, 40, 45, 255))
+    draw.rounded_rectangle((left, bar_y, left + int(content_w * scene["progress"]), bar_y + int(14 * scale)), radius=int(7 * scale), fill=(255, 75, 45, 235))
 
-
-def make_screenshot(size, scene):
-    bg = cover(Image.open(BACKDROP).convert("RGBA"), size)
-    bg.alpha_composite(Image.new("RGBA", size, (0, 0, 0, 45)))
-    draw_ui(bg, scene)
-    return bg.convert("RGB")
+    ad_top = h - ad_h
+    draw.rectangle((0, ad_top, w, h), fill=(4, 4, 5, 255))
+    draw.rectangle((0, ad_top, w, ad_top + 2), fill=(32, 32, 36, 255))
+    return base.convert("RGB")
 
 
 def main():
-    if not BACKDROP.exists():
-        raise SystemExit(f"Missing backdrop: {BACKDROP}")
     for device, size in DEVICES.items():
         out_dir = OUT / device
         out_dir.mkdir(parents=True, exist_ok=True)
         for scene in SCENES:
             path = out_dir / f"{scene['name']}.png"
-            make_screenshot(size, scene).save(path, quality=95)
+            draw_screen(scene, size).save(path, quality=95)
             print(path)
 
 

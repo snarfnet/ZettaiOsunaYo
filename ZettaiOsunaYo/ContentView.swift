@@ -53,6 +53,7 @@ private struct ResistanceView: View {
         ScrollView(showsIndicators: false) {
             VStack(spacing: 18) {
                 HeaderPanel()
+                DailyTrainingPanel()
                 ChallengePanel()
                 ModePicker()
 
@@ -61,6 +62,7 @@ private struct ResistanceView: View {
                     warningFlicker: warningFlicker
                 )
 
+                PressureEventPanel()
                 CalmActionPanel()
                 ProgressPanel()
                 AchievementPanel()
@@ -100,9 +102,58 @@ private struct HeaderPanel: View {
                 StatTile(title: "現在", value: game.elapsedText)
                 StatTile(title: "ベスト", value: game.bestText)
                 StatTile(title: "冷静", value: game.calmText)
-                StatTile(title: "任務", value: "\(game.completedMissionCount)/\(game.missions.count)")
+                StatTile(title: "対処", value: "\(game.counteredEventCount)/\(game.pressureEvents.count)")
             }
         }
+    }
+}
+
+private struct DailyTrainingPanel: View {
+    @EnvironmentObject private var game: GameViewModel
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(alignment: .firstTextBaseline) {
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("今日の修行")
+                        .font(.headline.weight(.black))
+                        .foregroundStyle(.white)
+                    Text("日替わり3本をクリアして、押さない力を積み上げる")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.white.opacity(0.58))
+                }
+                Spacer()
+                Text(game.dailyTrainingProgressText)
+                    .font(.headline.monospacedDigit().weight(.black))
+                    .foregroundStyle(.white)
+            }
+
+            HStack(spacing: 10) {
+                ForEach(game.dailyTrainingMissions) { mission in
+                    Button {
+                        game.startMission(mission)
+                    } label: {
+                        VStack(alignment: .leading, spacing: 7) {
+                            Image(systemName: game.completedMissionIDs.contains(mission.id) ? "checkmark.circle.fill" : "circle")
+                                .foregroundStyle(game.completedMissionIDs.contains(mission.id) ? .green : .white.opacity(0.5))
+                            Text(mission.title)
+                                .font(.caption.weight(.black))
+                                .foregroundStyle(.white)
+                                .lineLimit(2)
+                                .minimumScaleFactor(0.74)
+                            Text(game.formatted(seconds: mission.targetSeconds))
+                                .font(.caption.monospacedDigit().weight(.heavy))
+                                .foregroundStyle(.white.opacity(0.56))
+                        }
+                        .frame(maxWidth: .infinity, minHeight: 92, alignment: .topLeading)
+                        .padding(10)
+                        .background(Color.white.opacity(0.075), in: RoundedRectangle(cornerRadius: 8))
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+        }
+        .panelStyle()
     }
 }
 
@@ -294,6 +345,66 @@ private struct ButtonPanel: View {
                     .foregroundStyle(.black)
             }
             .buttonStyle(.plain)
+        }
+        .panelStyle()
+    }
+}
+
+private struct PressureEventPanel: View {
+    @EnvironmentObject private var game: GameViewModel
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                Text("緊急イベント")
+                    .font(.headline.weight(.black))
+                    .foregroundStyle(.white)
+                Spacer()
+                Label("最高\(game.bestEventStreak)コンボ", systemImage: "bolt.fill")
+                    .font(.caption.weight(.heavy))
+                    .foregroundStyle(.yellow.opacity(0.92))
+            }
+
+            if let event = game.activePressureEvent {
+                HStack(spacing: 12) {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .font(.title2.weight(.black))
+                        .foregroundStyle(.yellow)
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(event.title)
+                            .font(.headline.weight(.black))
+                            .foregroundStyle(.white)
+                        Text(event.detail)
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(.white.opacity(0.62))
+                    }
+                    Spacer()
+                    Label(event.requiredAction.title, systemImage: event.requiredAction.iconName)
+                        .font(.caption.weight(.black))
+                        .foregroundStyle(.black)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 8)
+                        .background(.white, in: RoundedRectangle(cornerRadius: 8))
+                }
+                .padding(12)
+                .background(Color.red.opacity(0.22), in: RoundedRectangle(cornerRadius: 8))
+            } else {
+                HStack(spacing: 12) {
+                    Image(systemName: "shield.lefthalf.filled")
+                        .font(.title2.weight(.bold))
+                        .foregroundStyle(.white.opacity(0.72))
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("次の誘惑に備える")
+                            .font(.headline.weight(.black))
+                            .foregroundStyle(.white)
+                        Text("途中で出る指示に合う行動を選ぶと、冷静ポイントとコンボが伸びます。")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(.white.opacity(0.58))
+                    }
+                }
+                .padding(12)
+                .background(Color.white.opacity(0.06), in: RoundedRectangle(cornerRadius: 8))
+            }
         }
         .panelStyle()
     }

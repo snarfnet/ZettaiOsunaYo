@@ -135,6 +135,14 @@ final class GameViewModel: ObservableObject {
         }
     }
 
+    struct PressureEvent: Identifiable, Equatable {
+        let id: String
+        let title: String
+        let detail: String
+        let requiredAction: CalmAction
+        let bonus: Int
+    }
+
     @Published private(set) var state: State = .resisting
     @Published private(set) var elapsedSeconds: Int = 0
     @Published private(set) var pulseLevel: Double = 0
@@ -143,16 +151,23 @@ final class GameViewModel: ObservableObject {
     @Published private(set) var calmActionCooldown: Int = 0
     @Published private(set) var completedMissionIDs: Set<String> = []
     @Published private(set) var activeMissionID: String?
+    @Published private(set) var activePressureEvent: PressureEvent?
+    @Published private(set) var eventStreak: Int = 0
+    @Published private(set) var bestEventStreak: Int = 0
+    @Published private(set) var counteredEventIDs: Set<String> = []
     @Published var selectedMode: Mode = .thirty
 
     private let audioPlayer: AudioTauntPlaying
     private var startedAt = Date()
     private var tickTask: Task<Void, Never>?
     private var normalAudioTask: Task<Void, Never>?
+    private var pressureEventTask: Task<Void, Never>?
     private var lastCalmActionSecond = -99
     private let sessionsKey = "zettai.sessions.v2"
     private let modeKey = "zettai.selectedMode.v2"
     private let completedMissionsKey = "zettai.completedMissions.v1"
+    private let counteredEventsKey = "zettai.counteredEvents.v1"
+    private let bestEventStreakKey = "zettai.bestEventStreak.v1"
 
     init(audioPlayer: AudioTauntPlaying) {
         self.audioPlayer = audioPlayer
@@ -163,6 +178,7 @@ final class GameViewModel: ObservableObject {
     deinit {
         tickTask?.cancel()
         normalAudioTask?.cancel()
+        pressureEventTask?.cancel()
     }
 
     var elapsedText: String {
@@ -202,6 +218,29 @@ final class GameViewModel: ObservableObject {
         ]
     }
 
+    var pressureEvents: [PressureEvent] {
+        [
+            PressureEvent(id: "finger-close", title: "指が近い", detail: "画面から目を外して誘惑を切る", requiredAction: .lookAway, bonus: 14),
+            PressureEvent(id: "voice-bait", title: "今なら押せる", detail: "3秒数えて反射を止める", requiredAction: .count, bonus: 16),
+            PressureEvent(id: "red-flash", title: "赤い点滅", detail: "深呼吸でゲージを落ち着かせる", requiredAction: .breathe, bonus: 12),
+            PressureEvent(id: "silent-gap", title: "静かすぎる", detail: "3秒数えて次の煽りに備える", requiredAction: .count, bonus: 15),
+            PressureEvent(id: "button-grow", title: "ボタン巨大化", detail: "目をそらして存在感を下げる", requiredAction: .lookAway, bonus: 13),
+            PressureEvent(id: "heartbeat", title: "鼓動が早い", detail: "深呼吸で手を止める", requiredAction: .breathe, bonus: 18)
+        ]
+    }
+
+    var dailyTrainingMissions: [ChallengeMission] {
+        let all = missions
+        guard !all.isEmpty else { return [] }
+        let day = Calendar.current.ordinality(of: .day, in: .era, for: Date()) ?? 0
+        return (0..<3).map { all[(day + $0 * 2) % all.count] }
+    }
+
+    var dailyTrainingProgressText: String {
+        let done = dailyTrainingMissions.filter { completedMissionIDs.contains($0.id) }.count
+        return "\(done)/\(dailyTrainingMissions.count)"
+    }
+
     var activeMission: ChallengeMission? {
         guard let activeMissionID else { return nil }
         return missions.first { $0.id == activeMissionID }
@@ -217,6 +256,10 @@ final class GameViewModel: ObservableObject {
 
     var canUseCalmAction: Bool {
         calmActionCooldown == 0 && state == .resisting
+    }
+
+    var counteredEventCount: Int {
+        counteredEventIDs.count
     }
 
     var modeGoalText: String {
@@ -262,7 +305,9 @@ final class GameViewModel: ObservableObject {
             ("10戦", sessions.count >= 10),
             ("冷静50", sessions.contains { ($0.calmScore ?? 0) >= 50 }),
             ("任務4", completedMissionCount >= 4),
-            ("全任務", completedMissionCount >= missions.count)
+            ("全任務", completedMissionCount >= missions.count),
+            ("対処3", counteredEventCount >= 3),
+            ("コンボ5", bestEventStreak >= 5)
         ]
     }
 
@@ -273,10 +318,13 @@ final class GameViewModel: ObservableObject {
         pulseLevel = 0
         calmScore = 0
         calmActionCooldown = 0
+        activePressureEvent = nil
+        eventStreak = 0
         lastCalmActionSecond = -99
         audioPlayer.stopLoop()
         startClock()
         startNormalAudioLoop()
+        startPressureEventLoop()
     }
 
     func chooseMode(_ mode: Mode) {
@@ -296,7 +344,19 @@ final class GameViewModel: ObservableObject {
     func performCalmAction(_ action: CalmAction) {
         guard canUseCalmAction else { return }
         lastCalmActionSecond = elapsedSeconds
-        calmScore += action.points
+        if let event = activePressureEvent, event.requiredAction == action {
+            calmScore += action.points + event.bonus
+            eventStreak += 1
+            bestEventStreak = max(bestEventStreak, eventStreak)
+            counteredEventIDs.insert(event.id)
+            activePressureEvent = nil
+            persistCounteredEvents()
+        } else {
+            calmScore += action.points
+            if activePressureEvent != nil {
+                eventStreak = 0
+            }
+        }
         updateElapsed()
     }
 
@@ -307,6 +367,7 @@ final class GameViewModel: ObservableObject {
         saveSession(succeeded: false)
         tickTask?.cancel()
         normalAudioTask?.cancel()
+        pressureEventTask?.cancel()
         audioPlayer.stopOneShot()
         audioPlayer.startPressedLoop()
     }
@@ -320,8 +381,11 @@ final class GameViewModel: ObservableObject {
     func resetProgress() {
         sessions = []
         completedMissionIDs = []
+        counteredEventIDs = []
+        bestEventStreak = 0
         persistSessions()
         persistCompletedMissions()
+        persistCounteredEvents()
         start()
     }
 
@@ -334,6 +398,7 @@ final class GameViewModel: ObservableObject {
         saveSession(succeeded: true)
         tickTask?.cancel()
         normalAudioTask?.cancel()
+        pressureEventTask?.cancel()
         audioPlayer.stopAll()
     }
 
@@ -361,6 +426,19 @@ final class GameViewModel: ObservableObject {
                 try? await Task.sleep(for: .seconds(delay))
                 guard !Task.isCancelled else { return }
                 self.audioPlayer.playRandomNormalOrWarning(elapsedSeconds: self.elapsedSeconds)
+            }
+        }
+    }
+
+    private func startPressureEventLoop() {
+        pressureEventTask?.cancel()
+        pressureEventTask = Task { [weak self] in
+            while !Task.isCancelled {
+                guard let self else { return }
+                let baseDelay = self.selectedMode == .chaos ? 7.0 : 11.0
+                try? await Task.sleep(for: .seconds(baseDelay + Double.random(in: 0...5)))
+                guard !Task.isCancelled, self.state == .resisting else { return }
+                self.activePressureEvent = self.pressureEvents.randomElement()
             }
         }
     }
@@ -416,6 +494,10 @@ final class GameViewModel: ObservableObject {
         if let completed = UserDefaults.standard.array(forKey: completedMissionsKey) as? [String] {
             completedMissionIDs = Set(completed)
         }
+        if let countered = UserDefaults.standard.array(forKey: counteredEventsKey) as? [String] {
+            counteredEventIDs = Set(countered)
+        }
+        bestEventStreak = UserDefaults.standard.integer(forKey: bestEventStreakKey)
         guard let data = UserDefaults.standard.data(forKey: sessionsKey),
               let decoded = try? JSONDecoder().decode([SessionRecord].self, from: data) else {
             return
@@ -431,6 +513,11 @@ final class GameViewModel: ObservableObject {
 
     private func persistCompletedMissions() {
         UserDefaults.standard.set(Array(completedMissionIDs), forKey: completedMissionsKey)
+    }
+
+    private func persistCounteredEvents() {
+        UserDefaults.standard.set(Array(counteredEventIDs), forKey: counteredEventsKey)
+        UserDefaults.standard.set(bestEventStreak, forKey: bestEventStreakKey)
     }
 
     func formatted(seconds: Int) -> String {

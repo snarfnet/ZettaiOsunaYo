@@ -29,14 +29,14 @@ META = {
 
 「絶対押すなよ」は、大きな赤いボタンを前にして、押さずに耐えるチャレンジゲームです。
 
-ステージ制のチャレンジ任務、30秒チャレンジ、クラシック、限界耐久、煽り強めの4モードを収録。深呼吸、目をそらす、3秒数えるなど、押さないための行動も選べます。
+日替わりの修行、ステージ制のチャレンジ任務、30秒チャレンジ、クラシック、限界耐久、煽り強めの4モードを収録。途中で出る緊急イベントに合わせて、深呼吸、目をそらす、3秒数えるなどの行動を選びます。
 
-ベストタイム、最近の挑戦、勝利数、押してしまった回数、冷静ポイント、称号、実績、任務の達成状況を保存。次はもう少し耐えたい、と思える記録型のネタゲームです。
+ベストタイム、最近の挑戦、勝利数、押してしまった回数、冷静ポイント、イベント対処数、コンボ、称号、実績、任務の達成状況を保存。次はもう少し耐えたい、と思える記録型のネタゲームです。
 
 友だちとの勝負、暇つぶし、自制心チェックにどうぞ。""",
         "keywords": "押すな,赤いボタン,ゲーム,暇つぶし,音声,タイマー,実績,記録,自制心",
-        "whatsNew": "ステージ制のチャレンジ任務、押さないための行動、冷静ポイント、任務の達成状況を追加しました。",
-        "promotionalText": "押すな。絶対に押すな。任務をクリアして、何秒耐えられる？",
+        "whatsNew": "今日の修行、緊急イベント、対処コンボ、イベント記録を追加しました。スクリーンショットも現在のゲーム画面に更新しました。",
+        "promotionalText": "押すな。絶対に押すな。緊急イベントを対処して、何秒耐えられる？",
         "marketingUrl": "https://snarfnet.github.io/",
         "supportUrl": "https://snarfnet.github.io/",
     },
@@ -45,14 +45,14 @@ META = {
 
 Don't Press It is a challenge game built around one giant red button. Your goal is simple: resist.
 
-Clear staged missions, or play four modes: 30-second challenge, classic, endurance, and high-pressure chaos. Use calm actions like breathing, looking away, and counting to resist the temptation.
+Clear daily drills and staged missions, or play four modes: 30-second challenge, classic, endurance, and high-pressure chaos. During play, pressure events appear and ask you to choose calm actions like breathing, looking away, and counting.
 
-Best time, recent attempts, wins, presses, calm points, rank titles, achievements, and mission progress are saved in the app, giving each short round a reason to try again.
+Best time, recent attempts, wins, presses, calm points, event counters, combo streaks, rank titles, achievements, and mission progress are saved in the app, giving each short round a reason to try again.
 
 Use it for quick laughs, waiting time, friendly challenges, or a tiny test of self-control.""",
         "keywords": "button,red button,game,challenge,voice,timer,achievements,records,self control",
-        "whatsNew": "Added staged missions, calm actions, calm points, and mission progress tracking.",
-        "promotionalText": "Do not press it. Clear missions. One red button. How long can you last?",
+        "whatsNew": "Added daily drills, pressure events, counter combos, event records, and updated screenshots showing the current app UI.",
+        "promotionalText": "Do not press it. Counter pressure events and see how long you can last.",
         "marketingUrl": "https://snarfnet.github.io/",
         "supportUrl": "https://snarfnet.github.io/",
     },
@@ -268,9 +268,10 @@ def ensure_review_detail(version_id):
         "demoAccountRequired": False,
         "notes": (
             "No login is required. The app does not call any external API. "
-            "The app now includes staged challenge missions, calm actions the user can choose during play, calm points, "
-            "mission completion tracking, four challenge modes, best-time tracking, achievements, recent session history, "
-            "rank titles, and bundled voice reactions played with AVAudioPlayer. "
+            "The app now includes daily drills, staged challenge missions, pressure events that appear during play, "
+            "matching calm actions, calm points, event counters, combo streaks, mission completion tracking, four challenge modes, "
+            "best-time tracking, achievements, recent session history, rank titles, and bundled voice reactions played with AVAudioPlayer. "
+            "All screenshots were regenerated to show the current in-app gameplay UI rather than marketing mockups. "
             "This build requests App Tracking Transparency permission shortly after first launch. "
             "Google Mobile Ads SDK is started only after the ATT flow completes or if the user has already made a tracking choice."
         ),
