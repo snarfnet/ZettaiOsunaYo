@@ -45,33 +45,69 @@ struct ContentView: View {
 }
 
 private struct ResistanceView: View {
+    enum Section: String, CaseIterable, Identifiable {
+        case arcade
+        case missions
+        case cards
+        case records
+
+        var id: String { rawValue }
+
+        var title: String {
+            switch self {
+            case .arcade: "アーケード"
+            case .missions: "任務"
+            case .cards: "カード"
+            case .records: "記録"
+            }
+        }
+
+        var iconName: String {
+            switch self {
+            case .arcade: "gamecontroller.fill"
+            case .missions: "flag.checkered"
+            case .cards: "rectangle.stack.fill"
+            case .records: "chart.bar.fill"
+            }
+        }
+    }
+
     @EnvironmentObject private var game: GameViewModel
     @State private var buttonBreathes = false
     @State private var warningFlicker = false
+    @State private var section: Section = .arcade
 
     var body: some View {
         ScrollView(showsIndicators: false) {
             VStack(spacing: 18) {
                 HeaderPanel()
-                ContentSummaryPanel()
-                DefenseGamePanel()
-                ReactionCardPanel()
-                ScenarioDeckPanel()
-                DailyTrainingPanel()
-                ChallengePanel()
-                ModePicker()
+                SectionPicker(selection: $section)
 
-                ButtonPanel(
-                    buttonBreathes: buttonBreathes,
-                    warningFlicker: warningFlicker
-                )
-
-                PressureEventPanel()
-                CalmActionPanel()
-                TipsPanel()
-                ProgressPanel()
-                AchievementPanel()
-                HistoryPanel()
+                switch section {
+                case .arcade:
+                    ArcadeOverviewPanel()
+                    DefenseGamePanel()
+                    SignalTrainingPanel()
+                    ButtonPanel(
+                        buttonBreathes: buttonBreathes,
+                        warningFlicker: warningFlicker
+                    )
+                case .missions:
+                    DailyTrainingPanel()
+                    ChallengePanel()
+                    ModePicker()
+                    PressureEventPanel()
+                    CalmActionPanel()
+                case .cards:
+                    ReactionCardPanel()
+                    ScenarioDeckPanel()
+                    TipsPanel()
+                case .records:
+                    ContentSummaryPanel()
+                    ProgressPanel()
+                    AchievementPanel()
+                    HistoryPanel()
+                }
             }
             .padding(.top, 22)
             .padding(.bottom, 30)
@@ -83,6 +119,33 @@ private struct ResistanceView: View {
             }
         }
         .animation(.easeInOut(duration: max(0.48, 1.2 - game.pulseLevel * 0.58)).repeatForever(autoreverses: true), value: buttonBreathes)
+    }
+}
+
+private struct SectionPicker: View {
+    @Binding var selection: ResistanceView.Section
+
+    var body: some View {
+        HStack(spacing: 8) {
+            ForEach(ResistanceView.Section.allCases) { section in
+                Button {
+                    selection = section
+                } label: {
+                    VStack(spacing: 5) {
+                        Image(systemName: section.iconName)
+                            .font(.headline.weight(.black))
+                        Text(section.title)
+                            .font(.caption2.weight(.black))
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.7)
+                    }
+                    .frame(maxWidth: .infinity, minHeight: 58)
+                    .background(selection == section ? Color.white.opacity(0.92) : Color.white.opacity(0.08), in: RoundedRectangle(cornerRadius: 8))
+                    .foregroundStyle(selection == section ? .black : .white)
+                }
+                .buttonStyle(.plain)
+            }
+        }
     }
 }
 
@@ -110,6 +173,53 @@ private struct HeaderPanel: View {
                 StatTile(title: "判断", value: game.reactionScoreText)
             }
         }
+    }
+}
+
+private struct ArcadeOverviewPanel: View {
+    @EnvironmentObject private var game: GameViewModel
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("赤ボタン・アーケード")
+                        .font(.headline.weight(.black))
+                        .foregroundStyle(.white)
+                    Text("反射、記憶、判断、耐久を切り替えて遊ぶ")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.white.opacity(0.58))
+                }
+                Spacer()
+                Label("4モード", systemImage: "gamecontroller.fill")
+                    .font(.caption.weight(.heavy))
+                    .foregroundStyle(.white.opacity(0.78))
+            }
+
+            LazyVGrid(columns: [GridItem(.adaptive(minimum: 160), spacing: 10)], spacing: 10) {
+                ForEach(game.arcadeModes) { mode in
+                    HStack(alignment: .top, spacing: 10) {
+                        Image(systemName: mode.iconName)
+                            .font(.title3.weight(.black))
+                            .foregroundStyle(.white)
+                            .frame(width: 26)
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(mode.title)
+                                .font(.caption.weight(.black))
+                                .foregroundStyle(.white)
+                            Text(mode.detail)
+                                .font(.caption2.weight(.semibold))
+                                .foregroundStyle(.white.opacity(0.55))
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                    }
+                    .frame(maxWidth: .infinity, minHeight: 76, alignment: .topLeading)
+                    .padding(10)
+                    .background(Color.white.opacity(0.075), in: RoundedRectangle(cornerRadius: 8))
+                }
+            }
+        }
+        .panelStyle()
     }
 }
 
@@ -234,6 +344,78 @@ private struct DefenseGamePanel: View {
         case .bonus:
             return Color.white.opacity(0.9)
         }
+    }
+}
+
+private struct SignalTrainingPanel: View {
+    @EnvironmentObject private var game: GameViewModel
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(alignment: .firstTextBaseline) {
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("シグナル訓練")
+                        .font(.headline.weight(.black))
+                        .foregroundStyle(.white)
+                    Text("表示された順番を覚えて、同じ行動を入力する")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.white.opacity(0.58))
+                }
+                Spacer()
+                VStack(alignment: .trailing, spacing: 2) {
+                    Text("\(game.signalScore)")
+                        .font(.headline.monospacedDigit().weight(.black))
+                        .foregroundStyle(.white)
+                    Text("BEST \(game.bestSignalScore)")
+                        .font(.caption2.monospacedDigit().weight(.heavy))
+                        .foregroundStyle(.white.opacity(0.5))
+                }
+            }
+
+            HStack(spacing: 8) {
+                ForEach(Array(game.signalSequence.enumerated()), id: \.offset) { pair in
+                    VStack(spacing: 5) {
+                        Image(systemName: pair.element.iconName)
+                            .font(.headline.weight(.black))
+                        Text("\(pair.offset + 1)")
+                            .font(.caption2.monospacedDigit().weight(.black))
+                    }
+                    .frame(maxWidth: .infinity, minHeight: 54)
+                    .background(pair.offset == game.signalIndex ? Color.white.opacity(0.9) : Color.white.opacity(0.08), in: RoundedRectangle(cornerRadius: 8))
+                    .foregroundStyle(pair.offset == game.signalIndex ? .black : .white.opacity(0.62))
+                }
+            }
+
+            HStack(spacing: 10) {
+                ForEach(GameViewModel.CalmAction.allCases) { action in
+                    Button {
+                        game.tapSignalAction(action)
+                    } label: {
+                        Label(action.title, systemImage: action.iconName)
+                            .font(.caption.weight(.black))
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.72)
+                            .frame(maxWidth: .infinity, minHeight: 48)
+                            .background(.white, in: RoundedRectangle(cornerRadius: 8))
+                            .foregroundStyle(.black)
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+
+            HStack {
+                Label("ROUND \(game.signalRound)", systemImage: "repeat")
+                Spacer()
+                Label("STEP \(min(game.signalIndex + 1, max(game.signalSequence.count, 1)))", systemImage: "arrow.right")
+            }
+            .font(.caption.monospacedDigit().weight(.heavy))
+            .foregroundStyle(.white.opacity(0.68))
+
+            Text(game.signalMessage)
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.white.opacity(0.62))
+        }
+        .panelStyle()
     }
 }
 

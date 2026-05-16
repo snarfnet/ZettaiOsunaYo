@@ -27,32 +27,32 @@ META = {
     "ja": {
         "description": """押すなと言われるほど、押したくなる。
 
-「絶対押すなよ」は、大きな赤いボタンを前にして、押さずに耐えるチャレンジゲームです。
+「絶対押すなよ」は、赤いボタンをテーマにしたアーケードゲーム集です。
 
-赤い罠を避けて安全タイルを処理する「ボタン防衛」、20本のチャレンジ任務、24枚の誘惑ジャッジ、16種類の緊急イベント、攻略メモ、日替わり修行、30秒チャレンジ、クラシック、限界耐久、煽り強めの4モードを収録。防衛ゲームでは青い回避タイルと冷静ボーナスを押してスコアを伸ばし、赤い罠を避けます。
+赤い罠を避けて安全タイルを処理する「ボタン防衛」、表示順を覚えて同じ行動を入力する「シグナル訓練」、状況を読んで3択で答える「誘惑ジャッジ」、赤いボタンに耐えるチャレンジ任務を収録。アーケード、任務、カード、記録の4タブで遊べます。
 
-ベストタイム、防衛ハイスコア、判断問題の正解数、最近の挑戦、勝利数、押してしまった回数、冷静ポイント、イベント対処数、コンボ、称号、18個の実績、任務の達成状況を保存。次はもう少し伸ばしたい、と思える記録型のネタゲームです。
+20本のチャレンジ任務、24枚の誘惑カード、16種類の緊急イベント、攻略メモ、日替わり修行も用意しました。ベストタイム、防衛ハイスコア、記憶スコア、判断問題の正解数、勝利数、冷静ポイント、コンボ、称号、20個の実績、任務の達成状況を保存します。
 
-友だちとの勝負、暇つぶし、自制心チェックにどうぞ。""",
+短時間で遊ぶ反射ゲーム、記憶ゲーム、判断ゲームとしてどうぞ。""",
         "keywords": "押すな,赤いボタン,ゲーム,暇つぶし,音声,タイマー,実績,記録,自制心",
-        "whatsNew": "赤い罠を避けて安全タイルを処理する新モード「ボタン防衛」を追加しました。防衛スコア、コンボ、ライフ、ハイスコア、実績も保存します。",
-        "promotionalText": "押すな。赤い罠を避けて、ボタン防衛でスコアを伸ばせ。",
+        "whatsNew": "アーケード、任務、カード、記録の4タブ構成に変更し、記憶順に行動を入力する新モード「シグナル訓練」を追加しました。",
+        "promotionalText": "赤ボタン・アーケード。反射、記憶、判断、耐久を遊ぼう。",
         "marketingUrl": "https://snarfnet.github.io/",
         "supportUrl": "https://snarfnet.github.io/",
     },
     "en-US": {
         "description": """The more you are told not to press it, the more tempting it gets.
 
-Don't Press It is a challenge game built around one giant red button. Your goal is simple: resist.
+Don't Press It is a red-button arcade collection built for quick play.
 
-Play Button Defense, an active tile game where you tap safe tiles and avoid red traps, clear 20 staged missions, answer 24 three-choice temptation judgment cards, handle 16 pressure events, read short strategy notes, or play four modes: 30-second challenge, classic, endurance, and high-pressure chaos.
+Play Button Defense, an active tile game where you tap safe tiles and avoid red traps. Play Signal Training, a memory game where you repeat the shown action order. Answer temptation judgment cards, clear staged survival missions, and switch between Arcade, Missions, Cards, and Records tabs.
 
-Best time, defense high score, judgment answers, recent attempts, wins, presses, calm points, event counters, combo streaks, rank titles, 18 achievements, and mission progress are saved in the app, giving each short round a reason to try again.
+The app includes 20 missions, 24 temptation cards, 16 pressure events, daily drills, strategy notes, four survival modes, best-time tracking, defense high score, signal high score, judgment answers, combo streaks, rank titles, 20 achievements, and mission progress.
 
-Use it for quick laughs, waiting time, friendly challenges, or a tiny test of self-control.""",
+Use it for quick reflex, memory, judgment, and endurance rounds.""",
         "keywords": "button,red button,game,challenge,voice,timer,achievements,records,self control",
-        "whatsNew": "Added Button Defense, an active tile game where players tap safe tiles, avoid red traps, build combos, keep lives, and save a high score.",
-        "promotionalText": "Do not press it. Avoid red traps and build your Button Defense score.",
+        "whatsNew": "Rebuilt the app around Arcade, Missions, Cards, and Records tabs, and added Signal Training, a memory game where players repeat the shown action order.",
+        "promotionalText": "A red-button arcade for reflex, memory, judgment, and endurance rounds.",
         "marketingUrl": "https://snarfnet.github.io/",
         "supportUrl": "https://snarfnet.github.io/",
     },
@@ -268,10 +268,12 @@ def ensure_review_detail(version_id):
         "demoAccountRequired": False,
         "notes": (
             "No login is required. The app does not call any external API. "
-            "The app now includes Button Defense, an active tile game where players tap safe tiles, avoid red traps, build combos, keep lives, and save a high score. "
-            "It also includes a visible content summary, 20 staged challenge missions, 24 three-choice temptation judgment cards, 16 pressure events, "
-            "daily drills, strategy notes, matching calm actions, calm points, event counters, combo streaks, mission completion tracking, four challenge modes, "
-            "best-time tracking, 18 achievements, recent session history, rank titles, and bundled voice reactions played with AVAudioPlayer. "
+            "The app has been rebuilt as a red-button arcade with four main tabs: Arcade, Missions, Cards, and Records. "
+            "Arcade now includes Button Defense, an active tile game where players tap safe tiles, avoid red traps, build combos, keep lives, and save a high score; "
+            "and Signal Training, a memory game where players repeat the shown order using breathe, look-away, and count actions. "
+            "It also includes 20 staged challenge missions, 24 three-choice temptation judgment cards, 16 pressure events, daily drills, strategy notes, "
+            "matching calm actions, calm points, event counters, combo streaks, mission completion tracking, four challenge modes, best-time tracking, "
+            "20 achievements, recent session history, rank titles, and bundled voice reactions played with AVAudioPlayer. "
             "All screenshots are captured from the running iOS app on simulators for the submitted device sizes. "
             "This build requests App Tracking Transparency permission shortly after first launch. "
             "Google Mobile Ads SDK is started only after the ATT flow completes or if the user has already made a tracking choice."

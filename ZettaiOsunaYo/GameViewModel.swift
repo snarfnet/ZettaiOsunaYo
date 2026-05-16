@@ -185,6 +185,13 @@ final class GameViewModel: ObservableObject {
         let kind: DefenseTileKind
     }
 
+    struct ArcadeMode: Identifiable, Equatable {
+        let id: String
+        let title: String
+        let detail: String
+        let iconName: String
+    }
+
     @Published private(set) var state: State = .resisting
     @Published private(set) var elapsedSeconds: Int = 0
     @Published private(set) var pulseLevel: Double = 0
@@ -208,6 +215,12 @@ final class GameViewModel: ObservableObject {
     @Published private(set) var defenseLives: Int = 3
     @Published private(set) var defenseRound: Int = 1
     @Published private(set) var defenseMessage = "青い回避タイルと冷静タイルを処理。赤い罠は押さない。"
+    @Published private(set) var signalSequence: [CalmAction] = []
+    @Published private(set) var signalIndex: Int = 0
+    @Published private(set) var signalScore: Int = 0
+    @Published private(set) var bestSignalScore: Int = 0
+    @Published private(set) var signalRound: Int = 1
+    @Published private(set) var signalMessage = "表示された順番どおりに行動を入力する"
     @Published var selectedMode: Mode = .thirty
 
     private let audioPlayer: AudioTauntPlaying
@@ -224,6 +237,7 @@ final class GameViewModel: ObservableObject {
     private let solvedReactionCountKey = "zettai.solvedReactionCount.v1"
     private let wrongReactionCountKey = "zettai.wrongReactionCount.v1"
     private let bestDefenseScoreKey = "zettai.bestDefenseScore.v1"
+    private let bestSignalScoreKey = "zettai.bestSignalScore.v1"
 
     init(audioPlayer: AudioTauntPlaying) {
         self.audioPlayer = audioPlayer
@@ -266,8 +280,18 @@ final class GameViewModel: ObservableObject {
             ("任務", "\(missions.count)", "段階チャレンジ"),
             ("誘惑", "\(reactionCards.count)", "3択カード"),
             ("防衛", "\(bestDefenseScore)", "最高スコア"),
+            ("記憶", "\(bestSignalScore)", "最高スコア"),
             ("イベント", "\(pressureEvents.count)", "緊急対処"),
             ("実績", "\(achievements.count)", "称号と記録")
+        ]
+    }
+
+    var arcadeModes: [ArcadeMode] {
+        [
+            ArcadeMode(id: "defense", title: "ボタン防衛", detail: "赤い罠を避けて安全タイルを処理", iconName: "square.grid.3x3.fill"),
+            ArcadeMode(id: "signal", title: "シグナル訓練", detail: "表示順を覚えて行動を入力", iconName: "arrow.triangle.branch"),
+            ArcadeMode(id: "judge", title: "誘惑ジャッジ", detail: "状況を読んで3択で対処", iconName: "checkmark.seal.fill"),
+            ArcadeMode(id: "survival", title: "耐久チャレンジ", detail: "任務を選んで赤ボタンに耐える", iconName: "timer")
         ]
     }
 
@@ -451,7 +475,9 @@ final class GameViewModel: ObservableObject {
             ("冷静100", sessions.contains { ($0.calmScore ?? 0) >= 100 }),
             ("5分", bestSeconds >= 300),
             ("防衛50", bestDefenseScore >= 50),
-            ("防衛100", bestDefenseScore >= 100)
+            ("防衛100", bestDefenseScore >= 100),
+            ("記憶50", bestSignalScore >= 50),
+            ("記憶100", bestSignalScore >= 100)
         ]
     }
 
@@ -472,6 +498,11 @@ final class GameViewModel: ObservableObject {
         defenseRound = 1
         defenseMessage = "青い回避タイルと冷静タイルを処理。赤い罠は押さない。"
         refreshDefenseBoard()
+        signalScore = 0
+        signalIndex = 0
+        signalRound = 1
+        signalMessage = "表示された順番どおりに行動を入力する"
+        refreshSignalSequence()
         lastCalmActionSecond = -99
         audioPlayer.stopLoop()
         startClock()
@@ -568,6 +599,29 @@ final class GameViewModel: ObservableObject {
         refreshDefenseBoard()
     }
 
+    func tapSignalAction(_ action: CalmAction) {
+        guard state == .resisting, !signalSequence.isEmpty else { return }
+        if action == signalSequence[signalIndex] {
+            signalScore += 10 + signalIndex * 2
+            calmScore += action.points
+            signalIndex += 1
+            signalMessage = signalIndex == signalSequence.count ? "成功。次のシグナルへ進みます。" : "合っています。次の行動へ。"
+            if signalIndex >= signalSequence.count {
+                signalRound += 1
+                bestSignalScore = max(bestSignalScore, signalScore)
+                persistSignalStats()
+                refreshSignalSequence()
+            }
+        } else {
+            signalScore = max(0, signalScore - 8)
+            signalIndex = 0
+            pulseLevel = min(1, pulseLevel + 0.14)
+            signalMessage = "順番が違います。最初から入力してください。"
+        }
+        bestSignalScore = max(bestSignalScore, signalScore)
+        persistSignalStats()
+    }
+
     func pressForbiddenButton() {
         guard state == .resisting else { return }
         updateElapsed()
@@ -594,11 +648,13 @@ final class GameViewModel: ObservableObject {
         solvedReactionCount = 0
         wrongReactionCount = 0
         bestDefenseScore = 0
+        bestSignalScore = 0
         persistSessions()
         persistCompletedMissions()
         persistCounteredEvents()
         persistReactionStats()
         persistDefenseStats()
+        persistSignalStats()
         start()
     }
 
@@ -621,6 +677,12 @@ final class GameViewModel: ObservableObject {
         defenseScore = 86
         defenseCombo = 7
         bestDefenseScore = 142
+        signalScore = 74
+        bestSignalScore = 128
+        signalRound = 6
+        signalIndex = 1
+        signalSequence = [.breathe, .count, .lookAway, .breathe]
+        signalMessage = "順番を覚えて、次の行動を選ぶ。"
         defenseLives = 3
         defenseRound = 9
         defenseTiles = [
@@ -785,6 +847,7 @@ final class GameViewModel: ObservableObject {
         solvedReactionCount = UserDefaults.standard.integer(forKey: solvedReactionCountKey)
         wrongReactionCount = UserDefaults.standard.integer(forKey: wrongReactionCountKey)
         bestDefenseScore = UserDefaults.standard.integer(forKey: bestDefenseScoreKey)
+        bestSignalScore = UserDefaults.standard.integer(forKey: bestSignalScoreKey)
         guard let data = UserDefaults.standard.data(forKey: sessionsKey),
               let decoded = try? JSONDecoder().decode([SessionRecord].self, from: data) else {
             return
@@ -817,6 +880,10 @@ final class GameViewModel: ObservableObject {
         UserDefaults.standard.set(bestDefenseScore, forKey: bestDefenseScoreKey)
     }
 
+    private func persistSignalStats() {
+        UserDefaults.standard.set(bestSignalScore, forKey: bestSignalScoreKey)
+    }
+
     private func refreshDefenseBoard() {
         let trapCount = min(4, 1 + defenseRound / 4)
         let bonusIndex = Int.random(in: 0..<9)
@@ -838,6 +905,12 @@ final class GameViewModel: ObservableObject {
             }
             return DefenseTile(id: defenseRound * 10 + index, kind: kind)
         }
+    }
+
+    private func refreshSignalSequence() {
+        let length = min(7, 3 + signalRound / 2)
+        signalSequence = (0..<length).map { _ in CalmAction.allCases.randomElement() ?? .breathe }
+        signalIndex = 0
     }
 
     func formatted(seconds: Int) -> String {
