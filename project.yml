@@ -37,15 +37,15 @@ targets:
     info:
       path: ZettaiOsunaYo/Info.plist
       properties:
-        CFBundleName: "絶対押すなよ"
-        CFBundleDisplayName: "絶対押すなよ"
+        CFBundleName: "Impulse Lab"
+        CFBundleDisplayName: "Impulse Lab"
         CFBundleIconName: AppIcon
         CFBundleShortVersionString: "1.0"
         CFBundleVersion: "$(CURRENT_PROJECT_VERSION)"
         LSRequiresIPhoneOS: true
         GADApplicationIdentifier: "ca-app-pub-3940256099942544~1458002511"
         ZETTAI_BOTTOM_BANNER_AD_UNIT_ID: "ca-app-pub-3940256099942544/2934735716"
-        NSUserTrackingUsageDescription: "広告の表示と効果測定のために使用します。許可しなくてもアプリはそのまま使えます。"
+        NSUserTrackingUsageDescription: "Used to show and measure ads. You can use the app even if you do not allow tracking."
         UILaunchScreen:
           UIColorName: ""
         UISupportedInterfaceOrientations:

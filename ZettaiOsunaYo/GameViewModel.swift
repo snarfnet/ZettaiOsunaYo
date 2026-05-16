@@ -8,146 +8,81 @@ final class GameViewModel: ObservableObject {
         case survived
     }
 
-    enum Mode: String, CaseIterable, Identifiable, Codable {
-        case classic
-        case thirty
-        case endurance
-        case chaos
-
-        var id: String { rawValue }
+    enum FocusTileKind: String, CaseIterable, Equatable {
+        case target
+        case decoy
+        case bonus
 
         var title: String {
             switch self {
-            case .classic:
-                return "クラシック"
-            case .thirty:
-                return "30秒チャレンジ"
-            case .endurance:
-                return "限界耐久"
-            case .chaos:
-                return "煽り強め"
-            }
-        }
-
-        var shortTitle: String {
-            switch self {
-            case .classic:
-                return "通常"
-            case .thirty:
-                return "30秒"
-            case .endurance:
-                return "耐久"
-            case .chaos:
-                return "強め"
-            }
-        }
-
-        var subtitle: String {
-            switch self {
-            case .classic:
-                return "好きなタイミングで退室。押したら負け。"
-            case .thirty:
-                return "30秒耐えたら勝ち。初回におすすめ。"
-            case .endurance:
-                return "3分を越えると称号が変わる長期戦。"
-            case .chaos:
-                return "声と演出の圧が早く上がる上級者向け。"
-            }
-        }
-
-        var targetSeconds: Int? {
-            switch self {
-            case .classic, .chaos:
-                return nil
-            case .thirty:
-                return 30
-            case .endurance:
-                return 180
-            }
-        }
-
-        var pressureScale: Double {
-            switch self {
-            case .classic:
-                return 1.0
-            case .thirty:
-                return 1.25
-            case .endurance:
-                return 0.72
-            case .chaos:
-                return 1.75
-            }
-        }
-    }
-
-    struct SessionRecord: Identifiable, Codable, Equatable {
-        let id: UUID
-        let date: Date
-        let mode: Mode
-        let seconds: Int
-        let succeeded: Bool
-        let calmScore: Int?
-        let missionTitle: String?
-
-        var resultText: String {
-            succeeded ? "耐え抜いた" : "押した"
-        }
-    }
-
-    struct ChallengeMission: Identifiable, Equatable {
-        let id: String
-        let title: String
-        let detail: String
-        let mode: Mode
-        let targetSeconds: Int
-        let rewardTitle: String
-    }
-
-    enum CalmAction: String, CaseIterable, Identifiable {
-        case breathe
-        case lookAway
-        case count
-
-        var id: String { rawValue }
-
-        var title: String {
-            switch self {
-            case .breathe: "深呼吸"
-            case .lookAway: "目をそらす"
-            case .count: "3秒数える"
+            case .target: "MATCH"
+            case .decoy: "SKIP"
+            case .bonus: "BONUS"
             }
         }
 
         var iconName: String {
             switch self {
-            case .breathe: "wind"
-            case .lookAway: "eye.slash.fill"
-            case .count: "timer"
-            }
-        }
-
-        var points: Int {
-            switch self {
-            case .breathe: 3
-            case .lookAway: 4
-            case .count: 5
+            case .target: "scope"
+            case .decoy: "xmark"
+            case .bonus: "sparkles"
             }
         }
     }
 
-    struct PressureEvent: Identifiable, Equatable {
+    enum PatternAction: String, CaseIterable, Identifiable {
+        case scan
+        case count
+        case hold
+        case switchLane
+
+        var id: String { rawValue }
+
+        var title: String {
+            switch self {
+            case .scan: "Scan"
+            case .count: "Count"
+            case .hold: "Hold"
+            case .switchLane: "Switch"
+            }
+        }
+
+        var iconName: String {
+            switch self {
+            case .scan: "eye.fill"
+            case .count: "number"
+            case .hold: "pause.fill"
+            case .switchLane: "arrow.left.arrow.right"
+            }
+        }
+    }
+
+    struct FocusTile: Identifiable, Equatable {
+        let id: Int
+        let kind: FocusTileKind
+        let label: String
+    }
+
+    struct ArcadeMode: Identifiable, Equatable {
         let id: String
         let title: String
         let detail: String
-        let requiredAction: CalmAction
-        let bonus: Int
+        let iconName: String
     }
 
-    struct ReactionCard: Identifiable, Equatable {
+    struct Mission: Identifiable, Equatable {
+        let id: String
+        let title: String
+        let detail: String
+        let target: Int
+        let reward: String
+    }
+
+    struct ScenarioCard: Identifiable, Equatable {
         let id: String
         let prompt: String
-        let choices: [CalmAction]
-        let correctAction: CalmAction
+        let choices: [PatternAction]
+        let answer: PatternAction
         let reward: Int
     }
 
@@ -158,764 +93,477 @@ final class GameViewModel: ObservableObject {
         let iconName: String
     }
 
-    enum DefenseTileKind: String, Equatable {
-        case safe
-        case trap
-        case bonus
-
-        var title: String {
-            switch self {
-            case .safe: "回避"
-            case .trap: "押すな"
-            case .bonus: "冷静"
-            }
-        }
-
-        var iconName: String {
-            switch self {
-            case .safe: "shield.fill"
-            case .trap: "hand.tap.fill"
-            case .bonus: "sparkles"
-            }
-        }
-    }
-
-    struct DefenseTile: Identifiable, Equatable {
-        let id: Int
-        let kind: DefenseTileKind
-    }
-
-    struct ArcadeMode: Identifiable, Equatable {
-        let id: String
-        let title: String
-        let detail: String
-        let iconName: String
+    struct SessionRecord: Identifiable, Codable, Equatable {
+        let id: UUID
+        let date: Date
+        let modeName: String
+        let score: Int
+        let note: String
     }
 
     @Published private(set) var state: State = .resisting
-    @Published private(set) var elapsedSeconds: Int = 0
-    @Published private(set) var pulseLevel: Double = 0
-    @Published private(set) var sessions: [SessionRecord] = []
-    @Published private(set) var calmScore: Int = 0
-    @Published private(set) var calmActionCooldown: Int = 0
-    @Published private(set) var completedMissionIDs: Set<String> = []
-    @Published private(set) var activeMissionID: String?
-    @Published private(set) var activePressureEvent: PressureEvent?
-    @Published private(set) var eventStreak: Int = 0
-    @Published private(set) var bestEventStreak: Int = 0
-    @Published private(set) var counteredEventIDs: Set<String> = []
-    @Published private(set) var activeReactionCard: ReactionCard?
-    @Published private(set) var solvedReactionCount: Int = 0
-    @Published private(set) var wrongReactionCount: Int = 0
-    @Published private(set) var reactionMessage = "状況を読んで、押さない選択を選ぶ"
-    @Published private(set) var defenseTiles: [DefenseTile] = []
-    @Published private(set) var defenseScore: Int = 0
-    @Published private(set) var defenseCombo: Int = 0
-    @Published private(set) var bestDefenseScore: Int = 0
-    @Published private(set) var defenseLives: Int = 3
-    @Published private(set) var defenseRound: Int = 1
-    @Published private(set) var defenseMessage = "青い回避タイルと冷静タイルを処理。赤い罠は押さない。"
-    @Published private(set) var signalSequence: [CalmAction] = []
-    @Published private(set) var signalIndex: Int = 0
-    @Published private(set) var signalScore: Int = 0
-    @Published private(set) var bestSignalScore: Int = 0
-    @Published private(set) var signalRound: Int = 1
-    @Published private(set) var signalMessage = "表示された順番どおりに行動を入力する"
-    @Published var selectedMode: Mode = .thirty
+    @Published private(set) var focusTiles: [FocusTile] = []
+    @Published private(set) var focusScore = 0
+    @Published private(set) var focusCombo = 0
+    @Published private(set) var focusLives = 3
+    @Published private(set) var focusRound = 1
+    @Published private(set) var bestFocusScore = 0
+    @Published private(set) var focusMessage = "Tap MATCH tiles, skip decoys, and keep the combo alive."
 
-    private let audioPlayer: AudioTauntPlaying
-    private var startedAt = Date()
-    private var tickTask: Task<Void, Never>?
-    private var normalAudioTask: Task<Void, Never>?
-    private var pressureEventTask: Task<Void, Never>?
-    private var lastCalmActionSecond = -99
-    private let sessionsKey = "zettai.sessions.v2"
-    private let modeKey = "zettai.selectedMode.v2"
-    private let completedMissionsKey = "zettai.completedMissions.v1"
-    private let counteredEventsKey = "zettai.counteredEvents.v1"
-    private let bestEventStreakKey = "zettai.bestEventStreak.v1"
-    private let solvedReactionCountKey = "zettai.solvedReactionCount.v1"
-    private let wrongReactionCountKey = "zettai.wrongReactionCount.v1"
-    private let bestDefenseScoreKey = "zettai.bestDefenseScore.v1"
-    private let bestSignalScoreKey = "zettai.bestSignalScore.v1"
+    @Published private(set) var patternSequence: [PatternAction] = []
+    @Published private(set) var patternIndex = 0
+    @Published private(set) var patternScore = 0
+    @Published private(set) var patternRound = 1
+    @Published private(set) var bestPatternScore = 0
+    @Published private(set) var patternMessage = "Memorize the shown order, then repeat it."
+
+    @Published private(set) var activeScenario: ScenarioCard?
+    @Published private(set) var scenarioScore = 0
+    @Published private(set) var solvedScenarioCount = 0
+    @Published private(set) var missedScenarioCount = 0
+    @Published private(set) var scenarioMessage = "Read the situation and choose the best response."
+
+    @Published private(set) var completedMissionIDs: Set<String> = []
+    @Published private(set) var sessions: [SessionRecord] = []
+
+    private let focusKey = "impulse.bestFocus.v1"
+    private let patternKey = "impulse.bestPattern.v1"
+    private let scenarioKey = "impulse.scenarioScore.v1"
+    private let solvedKey = "impulse.solvedScenario.v1"
+    private let missedKey = "impulse.missedScenario.v1"
+    private let missionsKey = "impulse.completedMissions.v1"
+    private let sessionsKey = "impulse.sessions.v1"
 
     init(audioPlayer: AudioTauntPlaying) {
-        self.audioPlayer = audioPlayer
+        _ = audioPlayer
         loadProgress()
         start()
     }
 
-    deinit {
-        tickTask?.cancel()
-        normalAudioTask?.cancel()
-        pressureEventTask?.cancel()
-    }
-
-    var elapsedText: String {
-        formatted(seconds: elapsedSeconds)
-    }
-
-    var bestSeconds: Int {
-        sessions.map(\.seconds).max() ?? 0
-    }
-
-    var bestText: String {
-        bestSeconds == 0 ? "--:--" : formatted(seconds: bestSeconds)
-    }
-
-    var clearCount: Int {
-        sessions.filter(\.succeeded).count
-    }
-
-    var pressCount: Int {
-        sessions.filter { !$0.succeeded }.count
-    }
-
-    var recentSessions: [SessionRecord] {
-        Array(sessions.prefix(5))
-    }
-
     var contentSummary: [(String, String, String)] {
         [
-            ("任務", "\(missions.count)", "段階チャレンジ"),
-            ("誘惑", "\(reactionCards.count)", "3択カード"),
-            ("防衛", "\(bestDefenseScore)", "最高スコア"),
-            ("記憶", "\(bestSignalScore)", "最高スコア"),
-            ("イベント", "\(pressureEvents.count)", "緊急対処"),
-            ("実績", "\(achievements.count)", "称号と記録")
+            ("Modes", "\(arcadeModes.count)", "play styles"),
+            ("Missions", "\(missions.count)", "goals"),
+            ("Scenarios", "\(scenarioCards.count)", "cards"),
+            ("Tips", "\(trainingTips.count)", "notes"),
+            ("Records", "\(sessions.count)", "runs"),
+            ("Badges", "\(achievements.count)", "targets")
         ]
     }
 
     var arcadeModes: [ArcadeMode] {
         [
-            ArcadeMode(id: "defense", title: "ボタン防衛", detail: "赤い罠を避けて安全タイルを処理", iconName: "square.grid.3x3.fill"),
-            ArcadeMode(id: "signal", title: "シグナル訓練", detail: "表示順を覚えて行動を入力", iconName: "arrow.triangle.branch"),
-            ArcadeMode(id: "judge", title: "誘惑ジャッジ", detail: "状況を読んで3択で対処", iconName: "checkmark.seal.fill"),
-            ArcadeMode(id: "survival", title: "耐久チャレンジ", detail: "任務を選んで赤ボタンに耐える", iconName: "timer")
+            ArcadeMode(id: "focus", title: "Focus Grid", detail: "Find matching tiles under pressure.", iconName: "square.grid.3x3.fill"),
+            ArcadeMode(id: "pattern", title: "Pattern Relay", detail: "Repeat longer action chains.", iconName: "arrow.triangle.branch"),
+            ArcadeMode(id: "scenario", title: "Scenario Cards", detail: "Choose the right response.", iconName: "rectangle.stack.fill"),
+            ArcadeMode(id: "daily", title: "Daily Set", detail: "Clear rotating goals.", iconName: "calendar")
         ]
     }
 
-    var missions: [ChallengeMission] {
+    var missions: [Mission] {
         [
-            ChallengeMission(id: "first-10", title: "初級 10秒", detail: "まずは短く。赤いボタンを見ても動かない。", mode: .thirty, targetSeconds: 10, rewardTitle: "冷静な親指"),
-            ChallengeMission(id: "first-30", title: "30秒の壁", detail: "煽りを聞きながら30秒耐える。", mode: .thirty, targetSeconds: 30, rewardTitle: "ボタン警戒員"),
-            ChallengeMission(id: "calm-45", title: "冷静キープ", detail: "押さないアクションを使いながら45秒。", mode: .classic, targetSeconds: 45, rewardTitle: "深呼吸マスター"),
-            ChallengeMission(id: "chaos-45", title: "煽り強め入門", detail: "圧が早く上がるモードで45秒。", mode: .chaos, targetSeconds: 45, rewardTitle: "耳を貸さない人"),
-            ChallengeMission(id: "minute", title: "1分耐久", detail: "1分を越えると、ボタンの存在感が変わる。", mode: .classic, targetSeconds: 60, rewardTitle: "鉄の指先"),
-            ChallengeMission(id: "endurance-90", title: "長期戦 90秒", detail: "急がず、押さず、淡々と耐える。", mode: .endurance, targetSeconds: 90, rewardTitle: "退室の達人"),
-            ChallengeMission(id: "chaos-120", title: "赤い誘惑", detail: "煽り強めで2分。ここからが本番。", mode: .chaos, targetSeconds: 120, rewardTitle: "不動の人"),
-            ChallengeMission(id: "endurance-180", title: "3分の静寂", detail: "限界耐久で3分。称号更新を狙う。", mode: .endurance, targetSeconds: 180, rewardTitle: "押さない達人"),
-            ChallengeMission(id: "quick-reset", title: "リセット我慢", detail: "失敗後すぐ押したい気持ちを15秒止める。", mode: .thirty, targetSeconds: 15, rewardTitle: "仕切り直し上手"),
-            ChallengeMission(id: "silent-40", title: "無音の40秒", detail: "静かな間こそ危ない。画面を見すぎない。", mode: .classic, targetSeconds: 40, rewardTitle: "沈黙の番人"),
-            ChallengeMission(id: "blink-55", title: "点滅55秒", detail: "赤い変化に釣られず、呼吸で流す。", mode: .classic, targetSeconds: 55, rewardTitle: "赤信号スルー"),
-            ChallengeMission(id: "count-70", title: "数えて70秒", detail: "3秒数える行動を軸に耐える。", mode: .endurance, targetSeconds: 70, rewardTitle: "カウント職人"),
-            ChallengeMission(id: "friend-80", title: "友だちの煽り", detail: "人に見られているつもりで80秒。", mode: .chaos, targetSeconds: 80, rewardTitle: "挑発無効"),
-            ChallengeMission(id: "focus-100", title: "視線外し100秒", detail: "目をそらす行動を使って長めに耐える。", mode: .endurance, targetSeconds: 100, rewardTitle: "視線コントロール"),
-            ChallengeMission(id: "calm-120", title: "冷静120", detail: "冷静ポイントを稼ぎながら2分。", mode: .endurance, targetSeconds: 120, rewardTitle: "心拍管理人"),
-            ChallengeMission(id: "no-action-30", title: "無操作30秒", detail: "あえて行動ボタンも使わず30秒。", mode: .thirty, targetSeconds: 30, rewardTitle: "手ぶら勝利"),
-            ChallengeMission(id: "late-game-150", title: "終盤150秒", detail: "後半の強い圧に備えて粘る。", mode: .endurance, targetSeconds: 150, rewardTitle: "終盤耐性"),
-            ChallengeMission(id: "chaos-180", title: "煽り3分", detail: "煽り強めで3分。かなりしぶとい人向け。", mode: .chaos, targetSeconds: 180, rewardTitle: "挑発の壁"),
-            ChallengeMission(id: "classic-240", title: "4分の赤", detail: "クラシックで4分。ボタンと同居する。", mode: .classic, targetSeconds: 240, rewardTitle: "赤の同居人"),
-            ChallengeMission(id: "endurance-300", title: "5分耐久", detail: "長期戦の到達点。集中を切らさない。", mode: .endurance, targetSeconds: 300, rewardTitle: "絶対王者")
+            Mission(id: "focus-40", title: "Focus 40", detail: "Score 40 in Focus Grid.", target: 40, reward: "Steady Eye"),
+            Mission(id: "focus-80", title: "Focus 80", detail: "Score 80 in Focus Grid.", target: 80, reward: "Tile Reader"),
+            Mission(id: "focus-120", title: "Focus 120", detail: "Score 120 in Focus Grid.", target: 120, reward: "Grid Captain"),
+            Mission(id: "combo-5", title: "Combo 5", detail: "Build a 5 chain in Focus Grid.", target: 5, reward: "Chain Starter"),
+            Mission(id: "combo-10", title: "Combo 10", detail: "Build a 10 chain in Focus Grid.", target: 10, reward: "Clean Sweep"),
+            Mission(id: "pattern-40", title: "Pattern 40", detail: "Score 40 in Pattern Relay.", target: 40, reward: "Memory Warmup"),
+            Mission(id: "pattern-80", title: "Pattern 80", detail: "Score 80 in Pattern Relay.", target: 80, reward: "Sequence Pilot"),
+            Mission(id: "pattern-120", title: "Pattern 120", detail: "Score 120 in Pattern Relay.", target: 120, reward: "Signal Keeper"),
+            Mission(id: "round-4", title: "Round 4", detail: "Reach Pattern Relay round 4.", target: 4, reward: "Pattern Climber"),
+            Mission(id: "round-8", title: "Round 8", detail: "Reach Pattern Relay round 8.", target: 8, reward: "Long Memory"),
+            Mission(id: "scenario-5", title: "5 Correct", detail: "Solve 5 scenario cards.", target: 5, reward: "Quick Judge"),
+            Mission(id: "scenario-12", title: "12 Correct", detail: "Solve 12 scenario cards.", target: 12, reward: "Calm Judge"),
+            Mission(id: "scenario-24", title: "24 Correct", detail: "Solve 24 scenario cards.", target: 24, reward: "Case Master"),
+            Mission(id: "total-150", title: "Total 150", detail: "Reach 150 combined points.", target: 150, reward: "Arcade Regular"),
+            Mission(id: "total-300", title: "Total 300", detail: "Reach 300 combined points.", target: 300, reward: "Arcade Pro"),
+            Mission(id: "total-500", title: "Total 500", detail: "Reach 500 combined points.", target: 500, reward: "Impulse Analyst"),
+            Mission(id: "no-miss-3", title: "Clean Start", detail: "Finish 3 correct actions in a row.", target: 3, reward: "No Miss"),
+            Mission(id: "cards-10", title: "Card Tour", detail: "Try 10 different scenario cards.", target: 10, reward: "Deck Walker"),
+            Mission(id: "daily-1", title: "Daily One", detail: "Clear one daily mission.", target: 1, reward: "Today Started"),
+            Mission(id: "daily-4", title: "Daily Four", detail: "Clear the daily set.", target: 4, reward: "Daily Clear"),
+            Mission(id: "records-3", title: "Three Runs", detail: "Save 3 records.", target: 3, reward: "Recorder"),
+            Mission(id: "records-10", title: "Ten Runs", detail: "Save 10 records.", target: 10, reward: "Archivist"),
+            Mission(id: "best-200", title: "Best 200", detail: "Set any best score above 200.", target: 200, reward: "Peak Run"),
+            Mission(id: "all-round", title: "All Round", detail: "Play all four sections.", target: 4, reward: "Full Tour")
         ]
     }
 
-    var pressureEvents: [PressureEvent] {
+    var scenarioCards: [ScenarioCard] {
         [
-            PressureEvent(id: "finger-close", title: "指が近い", detail: "画面から目を外して誘惑を切る", requiredAction: .lookAway, bonus: 14),
-            PressureEvent(id: "voice-bait", title: "今なら押せる", detail: "3秒数えて反射を止める", requiredAction: .count, bonus: 16),
-            PressureEvent(id: "red-flash", title: "赤い点滅", detail: "深呼吸でゲージを落ち着かせる", requiredAction: .breathe, bonus: 12),
-            PressureEvent(id: "silent-gap", title: "静かすぎる", detail: "3秒数えて次の煽りに備える", requiredAction: .count, bonus: 15),
-            PressureEvent(id: "button-grow", title: "ボタン巨大化", detail: "目をそらして存在感を下げる", requiredAction: .lookAway, bonus: 13),
-            PressureEvent(id: "heartbeat", title: "鼓動が早い", detail: "深呼吸で手を止める", requiredAction: .breathe, bonus: 18),
-            PressureEvent(id: "tiny-button", title: "押しやすいサイズ", detail: "小さい罠は数えて見送る", requiredAction: .count, bonus: 12),
-            PressureEvent(id: "near-clear", title: "あと少し", detail: "油断しそうな終盤は目をそらす", requiredAction: .lookAway, bonus: 17),
-            PressureEvent(id: "double-voice", title: "二重の声", detail: "深呼吸で音の圧を下げる", requiredAction: .breathe, bonus: 15),
-            PressureEvent(id: "fake-finish", title: "終わった気がする", detail: "3秒数えて画面を確認する", requiredAction: .count, bonus: 14),
-            PressureEvent(id: "red-shadow", title: "赤い影", detail: "視線を外して反射を切る", requiredAction: .lookAway, bonus: 16),
-            PressureEvent(id: "fast-pulse", title: "高速パルス", detail: "深呼吸でテンポを戻す", requiredAction: .breathe, bonus: 19),
-            PressureEvent(id: "tap-memory", title: "押した記憶", detail: "数えて指の癖を止める", requiredAction: .count, bonus: 13),
-            PressureEvent(id: "screen-glare", title: "画面が光る", detail: "目をそらして光を逃がす", requiredAction: .lookAway, bonus: 14),
-            PressureEvent(id: "last-second", title: "最後の1秒感", detail: "深呼吸で早押しを防ぐ", requiredAction: .breathe, bonus: 20),
-            PressureEvent(id: "thumb-warm", title: "親指が熱い", detail: "3秒数えて手を離す", requiredAction: .count, bonus: 18)
+            ScenarioCard(id: "noisy-room", prompt: "The screen is busy and several targets appear at once.", choices: [.scan, .count, .hold], answer: .scan, reward: 14),
+            ScenarioCard(id: "fast-choice", prompt: "A quick choice appears before you have checked the label.", choices: [.hold, .switchLane, .count], answer: .hold, reward: 16),
+            ScenarioCard(id: "many-numbers", prompt: "A number pattern is shown with one missing step.", choices: [.count, .scan, .switchLane], answer: .count, reward: 18),
+            ScenarioCard(id: "lane-change", prompt: "The target moves from the left lane to the right lane.", choices: [.switchLane, .hold, .scan], answer: .switchLane, reward: 18),
+            ScenarioCard(id: "blurred-icon", prompt: "An icon is hard to read, but the surrounding labels are clear.", choices: [.scan, .hold, .count], answer: .scan, reward: 15),
+            ScenarioCard(id: "false-start", prompt: "The first tile looks correct, then changes at the last moment.", choices: [.hold, .scan, .count], answer: .hold, reward: 20),
+            ScenarioCard(id: "wide-board", prompt: "The board grows wider on iPad and the target is near the edge.", choices: [.scan, .switchLane, .count], answer: .scan, reward: 16),
+            ScenarioCard(id: "rhythm-break", prompt: "A steady rhythm breaks for one step.", choices: [.count, .hold, .switchLane], answer: .count, reward: 17),
+            ScenarioCard(id: "double-signal", prompt: "Two signals appear, but only the second one matches the rule.", choices: [.switchLane, .scan, .hold], answer: .switchLane, reward: 19),
+            ScenarioCard(id: "low-time", prompt: "Time feels low and the next step is unclear.", choices: [.hold, .count, .scan], answer: .hold, reward: 16),
+            ScenarioCard(id: "hidden-order", prompt: "The sequence is correct, but the order is reversed.", choices: [.count, .scan, .switchLane], answer: .count, reward: 20),
+            ScenarioCard(id: "bonus-trap", prompt: "A bonus appears next to a decoy.", choices: [.scan, .hold, .switchLane], answer: .scan, reward: 18),
+            ScenarioCard(id: "late-switch", prompt: "The active lane switches after two actions.", choices: [.switchLane, .count, .hold], answer: .switchLane, reward: 19),
+            ScenarioCard(id: "same-label", prompt: "Two tiles share a label, but only one has the matching icon.", choices: [.scan, .count, .hold], answer: .scan, reward: 18),
+            ScenarioCard(id: "long-chain", prompt: "The next pattern has six steps.", choices: [.count, .hold, .scan], answer: .count, reward: 17),
+            ScenarioCard(id: "pause-window", prompt: "A short pause gives you time to confirm the rule.", choices: [.hold, .switchLane, .scan], answer: .hold, reward: 15),
+            ScenarioCard(id: "side-target", prompt: "The target is not centered and the decoy is louder.", choices: [.scan, .switchLane, .hold], answer: .scan, reward: 18),
+            ScenarioCard(id: "memory-slip", prompt: "You forgot the third action in the relay.", choices: [.count, .hold, .switchLane], answer: .count, reward: 16),
+            ScenarioCard(id: "rule-change", prompt: "The rule changes from shape to number.", choices: [.switchLane, .scan, .hold], answer: .switchLane, reward: 20),
+            ScenarioCard(id: "final-step", prompt: "The final step looks easy and invites a rushed answer.", choices: [.hold, .count, .scan], answer: .hold, reward: 19),
+            ScenarioCard(id: "quiet-board", prompt: "Nothing moves for a moment, then one tile changes.", choices: [.scan, .hold, .count], answer: .scan, reward: 15),
+            ScenarioCard(id: "mirror-row", prompt: "The row mirrors itself and the center tile is neutral.", choices: [.count, .switchLane, .hold], answer: .count, reward: 17),
+            ScenarioCard(id: "wrong-lane", prompt: "You started in the wrong lane.", choices: [.switchLane, .hold, .scan], answer: .switchLane, reward: 18),
+            ScenarioCard(id: "dense-set", prompt: "A dense set of small labels appears on iPad.", choices: [.scan, .count, .hold], answer: .scan, reward: 16),
+            ScenarioCard(id: "bonus-chain", prompt: "A bonus can extend the chain, but only after the match.", choices: [.hold, .scan, .count], answer: .scan, reward: 20),
+            ScenarioCard(id: "step-gap", prompt: "There is a gap between step two and step three.", choices: [.count, .hold, .switchLane], answer: .count, reward: 16),
+            ScenarioCard(id: "edge-case", prompt: "The correct answer sits at the edge of the layout.", choices: [.scan, .switchLane, .hold], answer: .scan, reward: 18),
+            ScenarioCard(id: "recovery", prompt: "You made one mistake and need to restart cleanly.", choices: [.hold, .count, .scan], answer: .hold, reward: 15)
         ]
-    }
-
-    var reactionCards: [ReactionCard] {
-        [
-            ReactionCard(id: "fake-safe", prompt: "ボタンが小さくなった。今なら押しても平気そう。", choices: [.count, .breathe, .lookAway], correctAction: .count, reward: 20),
-            ReactionCard(id: "voice-order", prompt: "音声が『押すな』を連呼。逆に押したくなってきた。", choices: [.breathe, .count, .lookAway], correctAction: .breathe, reward: 18),
-            ReactionCard(id: "red-pulse", prompt: "赤い光が強く点滅。画面から目が離れない。", choices: [.lookAway, .breathe, .count], correctAction: .lookAway, reward: 22),
-            ReactionCard(id: "friend-dare", prompt: "友だちが『ここで押せる？』と煽ってきた。", choices: [.count, .lookAway, .breathe], correctAction: .count, reward: 17),
-            ReactionCard(id: "silent-room", prompt: "急に静かになった。次の音に反応しそう。", choices: [.breathe, .lookAway, .count], correctAction: .breathe, reward: 16),
-            ReactionCard(id: "thumb-hover", prompt: "親指がボタンの上で止まっている。", choices: [.lookAway, .count, .breathe], correctAction: .lookAway, reward: 21),
-            ReactionCard(id: "almost-clear", prompt: "残り数秒。勝った気がして指が動きそう。", choices: [.breathe, .count, .lookAway], correctAction: .count, reward: 19),
-            ReactionCard(id: "small-button", prompt: "ボタンが小さく見える。危険度が低そうに見える。", choices: [.count, .lookAway, .breathe], correctAction: .count, reward: 18),
-            ReactionCard(id: "big-button", prompt: "ボタンが画面いっぱいに迫ってくる。", choices: [.lookAway, .breathe, .count], correctAction: .lookAway, reward: 24),
-            ReactionCard(id: "fake-rule", prompt: "『一回だけならセーフ』という文字が出た。", choices: [.count, .breathe, .lookAway], correctAction: .count, reward: 23),
-            ReactionCard(id: "fast-heart", prompt: "心拍が早くなり、すぐ決めたくなる。", choices: [.breathe, .lookAway, .count], correctAction: .breathe, reward: 20),
-            ReactionCard(id: "red-afterimage", prompt: "赤い残像が目に残っている。", choices: [.lookAway, .count, .breathe], correctAction: .lookAway, reward: 19),
-            ReactionCard(id: "score-greed", prompt: "押したら隠しボーナスがありそうに見える。", choices: [.count, .lookAway, .breathe], correctAction: .count, reward: 22),
-            ReactionCard(id: "quiet-win", prompt: "何も起きない。退屈で押したくなってきた。", choices: [.breathe, .count, .lookAway], correctAction: .breathe, reward: 17),
-            ReactionCard(id: "voice-soft", prompt: "優しい声で『押してもいいよ』と言われた。", choices: [.count, .breathe, .lookAway], correctAction: .count, reward: 21),
-            ReactionCard(id: "finger-slip", prompt: "指が滑ってボタンに近づいた。", choices: [.lookAway, .count, .breathe], correctAction: .lookAway, reward: 20),
-            ReactionCard(id: "screen-freeze", prompt: "画面が止まったように見える。触って確認したい。", choices: [.count, .breathe, .lookAway], correctAction: .count, reward: 18),
-            ReactionCard(id: "friend-laugh", prompt: "横で笑われた。焦って何かしたくなる。", choices: [.breathe, .count, .lookAway], correctAction: .breathe, reward: 19),
-            ReactionCard(id: "timer-hide", prompt: "タイマーが隠れた。あと何秒か気になる。", choices: [.count, .lookAway, .breathe], correctAction: .count, reward: 16),
-            ReactionCard(id: "red-ring", prompt: "赤いリングが広がって、中央を見てしまう。", choices: [.lookAway, .breathe, .count], correctAction: .lookAway, reward: 23),
-            ReactionCard(id: "almost-touch", prompt: "押していないのに、押した感覚だけがある。", choices: [.breathe, .count, .lookAway], correctAction: .breathe, reward: 18),
-            ReactionCard(id: "new-record", prompt: "新記録が近い。ここで欲を出しそう。", choices: [.count, .lookAway, .breathe], correctAction: .count, reward: 25),
-            ReactionCard(id: "advice-bait", prompt: "攻略メモが『押して確認』と言っている気がする。", choices: [.lookAway, .breathe, .count], correctAction: .lookAway, reward: 22),
-            ReactionCard(id: "double-tap", prompt: "二回押せば逆に勝ち、という謎の理屈が浮かんだ。", choices: [.breathe, .count, .lookAway], correctAction: .breathe, reward: 24)
-        ]
-    }
-
-    var featuredReactionCards: [ReactionCard] {
-        Array(reactionCards.prefix(12))
     }
 
     var trainingTips: [TrainingTip] {
         [
-            TrainingTip(id: "breathe-first", title: "最初は深呼吸", detail: "緊張ゲージが上がる前に呼吸で余裕を作る。", iconName: "wind"),
-            TrainingTip(id: "look-away", title: "見すぎない", detail: "赤いボタンを注視すると押したくなる。", iconName: "eye.slash.fill"),
-            TrainingTip(id: "count-three", title: "3秒だけ待つ", detail: "反射で押しそうな時は数える。", iconName: "timer"),
-            TrainingTip(id: "mission-order", title: "短い任務から", detail: "10秒、30秒、45秒の順で慣れる。", iconName: "list.number"),
-            TrainingTip(id: "chaos-later", title: "煽り強めは後で", detail: "記録を作ってから挑むと続きやすい。", iconName: "flame.fill"),
-            TrainingTip(id: "record-mood", title: "失敗も記録", detail: "押した回数も履歴に残るので次に活かす。", iconName: "clock.arrow.circlepath")
+            TrainingTip(id: "read-rule", title: "Read the rule first", detail: "Look at the target label before touching the grid.", iconName: "text.magnifyingglass"),
+            TrainingTip(id: "short-chain", title: "Chunk patterns", detail: "Treat long sequences as groups of two.", iconName: "link"),
+            TrainingTip(id: "use-pause", title: "Use the pause", detail: "A short hold beats a rushed miss.", iconName: "pause.circle.fill"),
+            TrainingTip(id: "wide-layout", title: "Scan edges", detail: "On iPad, targets may sit far from the center.", iconName: "ipad"),
+            TrainingTip(id: "combo-care", title: "Protect combos", detail: "Combo value grows faster than single taps.", iconName: "bolt.fill"),
+            TrainingTip(id: "review-log", title: "Check records", detail: "Recent runs show which mode needs practice.", iconName: "list.bullet.rectangle")
         ]
     }
 
-    var dailyTrainingMissions: [ChallengeMission] {
-        let all = missions
-        guard !all.isEmpty else { return [] }
+    var dailyMissions: [Mission] {
+        guard !missions.isEmpty else { return [] }
         let day = Calendar.current.ordinality(of: .day, in: .era, for: Date()) ?? 0
-        return (0..<4).map { all[(day + $0 * 2) % all.count] }
+        return (0..<4).map { missions[(day + $0 * 3) % missions.count] }
     }
 
-    var dailyTrainingProgressText: String {
-        let done = dailyTrainingMissions.filter { completedMissionIDs.contains($0.id) }.count
-        return "\(done)/\(dailyTrainingMissions.count)"
+    var dailyProgressText: String {
+        "\(dailyMissions.filter { completedMissionIDs.contains($0.id) }.count)/\(dailyMissions.count)"
     }
 
-    var activeMission: ChallengeMission? {
-        guard let activeMissionID else { return nil }
-        return missions.first { $0.id == activeMissionID }
+    var totalScore: Int {
+        focusScore + patternScore + scenarioScore
     }
 
-    var completedMissionCount: Int {
-        completedMissionIDs.count
-    }
-
-    var calmText: String {
-        "\(calmScore) pt"
-    }
-
-    var canUseCalmAction: Bool {
-        calmActionCooldown == 0 && state == .resisting
-    }
-
-    var counteredEventCount: Int {
-        counteredEventIDs.count
-    }
-
-    var reactionScoreText: String {
-        "\(solvedReactionCount)問"
-    }
-
-    var modeGoalText: String {
-        if let mission = activeMission {
-            return "\(mission.title): \(formatted(seconds: mission.targetSeconds))まで耐える"
-        }
-        if let target = selectedMode.targetSeconds {
-            return "\(formatted(seconds: target))まで耐える"
-        } else {
-            return "押さずに退室すると記録"
-        }
-    }
-
-    var progress: Double {
-        guard let target = currentTargetSeconds else {
-            return min(1, Double(elapsedSeconds) / 180.0)
-        }
-        return min(1, Double(elapsedSeconds) / Double(target))
+    var bestOverallScore: Int {
+        max(bestFocusScore, bestPatternScore, sessions.map(\.score).max() ?? 0)
     }
 
     var rankTitle: String {
-        switch bestSeconds {
-        case 0..<30: "見習い"
-        case 30..<60: "ボタン警戒員"
-        case 60..<180: "鉄の指先"
-        case 180..<300: "押さない達人"
-        default: "絶対王者"
+        switch bestOverallScore {
+        case 0..<60: "Starter"
+        case 60..<140: "Focused"
+        case 140..<260: "Sharp"
+        case 260..<420: "Expert"
+        default: "Master"
         }
-    }
-
-    var survivedText: String {
-        let base = "\(elapsedText) 耐えました"
-        guard let target = selectedMode.targetSeconds else { return base }
-        return elapsedSeconds >= target ? "\(base)。目標達成です。" : base
     }
 
     var achievements: [(String, Bool)] {
         [
-            ("30秒", bestSeconds >= 30),
-            ("1分", bestSeconds >= 60),
-            ("3分", bestSeconds >= 180),
-            ("5勝", clearCount >= 5),
-            ("10戦", sessions.count >= 10),
-            ("冷静50", sessions.contains { ($0.calmScore ?? 0) >= 50 }),
-            ("任務4", completedMissionCount >= 4),
-            ("全任務", completedMissionCount >= missions.count),
-            ("対処3", counteredEventCount >= 3),
-            ("コンボ5", bestEventStreak >= 5),
-            ("判断5", solvedReactionCount >= 5),
-            ("判断20", solvedReactionCount >= 20),
-            ("任務12", completedMissionCount >= 12),
-            ("対処10", counteredEventCount >= 10),
-            ("冷静100", sessions.contains { ($0.calmScore ?? 0) >= 100 }),
-            ("5分", bestSeconds >= 300),
-            ("防衛50", bestDefenseScore >= 50),
-            ("防衛100", bestDefenseScore >= 100),
-            ("記憶50", bestSignalScore >= 50),
-            ("記憶100", bestSignalScore >= 100)
+            ("Focus 50", bestFocusScore >= 50),
+            ("Focus 100", bestFocusScore >= 100),
+            ("Focus 200", bestFocusScore >= 200),
+            ("Combo 5", focusCombo >= 5 || sessions.contains { $0.note.contains("combo") }),
+            ("Pattern 50", bestPatternScore >= 50),
+            ("Pattern 100", bestPatternScore >= 100),
+            ("Pattern 200", bestPatternScore >= 200),
+            ("Round 5", patternRound >= 5),
+            ("Scenario 5", solvedScenarioCount >= 5),
+            ("Scenario 12", solvedScenarioCount >= 12),
+            ("Scenario 24", solvedScenarioCount >= 24),
+            ("Total 150", totalScore >= 150 || sessions.contains { $0.score >= 150 }),
+            ("Total 300", totalScore >= 300 || sessions.contains { $0.score >= 300 }),
+            ("Daily 1", dailyMissions.contains { completedMissionIDs.contains($0.id) }),
+            ("Daily Set", dailyMissions.allSatisfy { completedMissionIDs.contains($0.id) }),
+            ("Missions 6", completedMissionIDs.count >= 6),
+            ("Missions 12", completedMissionIDs.count >= 12),
+            ("Missions All", completedMissionIDs.count >= missions.count),
+            ("Records 3", sessions.count >= 3),
+            ("Records 10", sessions.count >= 10),
+            ("Few Misses", missedScenarioCount <= 3 && solvedScenarioCount >= 8),
+            ("Card Tour", solvedScenarioCount + missedScenarioCount >= 10),
+            ("Peak 200", bestOverallScore >= 200),
+            ("Peak 400", bestOverallScore >= 400)
         ]
+    }
+
+    var recentSessions: [SessionRecord] {
+        Array(sessions.prefix(6))
     }
 
     func start() {
         state = .resisting
-        startedAt = Date()
-        elapsedSeconds = 0
-        pulseLevel = 0
-        calmScore = 0
-        calmActionCooldown = 0
-        activePressureEvent = nil
-        eventStreak = 0
-        activeReactionCard = reactionCards.randomElement()
-        reactionMessage = "状況を読んで、押さない選択を選ぶ"
-        defenseScore = 0
-        defenseCombo = 0
-        defenseLives = 3
-        defenseRound = 1
-        defenseMessage = "青い回避タイルと冷静タイルを処理。赤い罠は押さない。"
-        refreshDefenseBoard()
-        signalScore = 0
-        signalIndex = 0
-        signalRound = 1
-        signalMessage = "表示された順番どおりに行動を入力する"
-        refreshSignalSequence()
-        lastCalmActionSecond = -99
-        audioPlayer.stopLoop()
-        startClock()
-        startNormalAudioLoop()
-        startPressureEventLoop()
+        focusScore = 0
+        focusCombo = 0
+        focusLives = 3
+        focusRound = 1
+        focusMessage = "Tap MATCH tiles, skip decoys, and keep the combo alive."
+        refreshFocusBoard()
+
+        patternScore = 0
+        patternIndex = 0
+        patternRound = 1
+        patternMessage = "Memorize the shown order, then repeat it."
+        refreshPatternSequence()
+
+        activeScenario = scenarioCards.randomElement()
+        scenarioMessage = "Read the situation and choose the best response."
     }
 
-    func chooseMode(_ mode: Mode) {
-        activeMissionID = nil
-        selectedMode = mode
-        UserDefaults.standard.set(mode.rawValue, forKey: modeKey)
-        start()
-    }
-
-    func startMission(_ mission: ChallengeMission) {
-        activeMissionID = mission.id
-        selectedMode = mission.mode
-        UserDefaults.standard.set(mission.mode.rawValue, forKey: modeKey)
-        start()
-    }
-
-    func performCalmAction(_ action: CalmAction) {
-        guard canUseCalmAction else { return }
-        lastCalmActionSecond = elapsedSeconds
-        if let event = activePressureEvent, event.requiredAction == action {
-            calmScore += action.points + event.bonus
-            eventStreak += 1
-            bestEventStreak = max(bestEventStreak, eventStreak)
-            counteredEventIDs.insert(event.id)
-            activePressureEvent = nil
-            persistCounteredEvents()
-        } else {
-            calmScore += action.points
-            if activePressureEvent != nil {
-                eventStreak = 0
-            }
-        }
-        updateElapsed()
-    }
-
-    func answerReaction(_ action: CalmAction) {
-        guard let card = activeReactionCard, state == .resisting else { return }
-        if action == card.correctAction {
-            solvedReactionCount += 1
-            calmScore += card.reward
-            eventStreak += 1
-            bestEventStreak = max(bestEventStreak, eventStreak)
-            reactionMessage = "正解。\(action.title)で誘惑を切りました"
-        } else {
-            wrongReactionCount += 1
-            eventStreak = 0
-            pulseLevel = min(1, pulseLevel + 0.16)
-            reactionMessage = "惜しい。今回は\(card.correctAction.title)が安全でした"
-        }
-        persistReactionStats()
-        activeReactionCard = nextReactionCard(after: card)
-    }
-
-    func selectReactionCard(_ card: ReactionCard) {
-        guard state == .resisting else { return }
-        activeReactionCard = card
-        reactionMessage = "この誘惑への対処を選んでください"
-    }
-
-    func tapDefenseTile(_ tile: DefenseTile) {
+    func tapFocusTile(_ tile: FocusTile) {
         guard state == .resisting else { return }
         switch tile.kind {
-        case .safe:
-            defenseScore += 8 + defenseCombo
-            defenseCombo += 1
-            calmScore += 2
-            defenseMessage = "回避成功。赤い罠には触らない。"
+        case .target:
+            focusScore += 10 + focusCombo
+            focusCombo += 1
+            focusMessage = "Match found. Combo \(focusCombo)."
         case .bonus:
-            defenseScore += 15 + defenseCombo
-            defenseCombo += 2
-            calmScore += 6
-            pulseLevel = max(0, pulseLevel - 0.08)
-            defenseMessage = "冷静ボーナス。緊張を少し下げました。"
-        case .trap:
-            defenseLives -= 1
-            defenseCombo = 0
-            pulseLevel = min(1, pulseLevel + 0.2)
-            defenseMessage = defenseLives > 0 ? "赤い罠です。残り\(defenseLives)回。" : "罠を押しました。防衛失敗。"
-            if defenseLives <= 0 {
-                bestDefenseScore = max(bestDefenseScore, defenseScore)
-                persistDefenseStats()
-                pressForbiddenButton()
-                return
+            focusScore += 18 + focusCombo
+            focusCombo += 2
+            focusLives = min(5, focusLives + 1)
+            focusMessage = "Bonus secured. Extra focus gained."
+        case .decoy:
+            focusLives -= 1
+            focusCombo = 0
+            focusMessage = focusLives > 0 ? "Decoy hit. \(focusLives) lives left." : "Round ended. Save the run and restart."
+            if focusLives <= 0 {
+                saveSession(modeName: "Focus Grid", score: focusScore, note: "Ended by decoy")
+                state = .failed
             }
         }
-        defenseRound += 1
-        bestDefenseScore = max(bestDefenseScore, defenseScore)
-        persistDefenseStats()
-        refreshDefenseBoard()
+        focusRound += 1
+        bestFocusScore = max(bestFocusScore, focusScore)
+        persistScores()
+        evaluateMissions()
+        if state == .resisting {
+            refreshFocusBoard()
+        }
     }
 
-    func tapSignalAction(_ action: CalmAction) {
-        guard state == .resisting, !signalSequence.isEmpty else { return }
-        if action == signalSequence[signalIndex] {
-            signalScore += 10 + signalIndex * 2
-            calmScore += action.points
-            signalIndex += 1
-            signalMessage = signalIndex == signalSequence.count ? "成功。次のシグナルへ進みます。" : "合っています。次の行動へ。"
-            if signalIndex >= signalSequence.count {
-                signalRound += 1
-                bestSignalScore = max(bestSignalScore, signalScore)
-                persistSignalStats()
-                refreshSignalSequence()
+    func tapPatternAction(_ action: PatternAction) {
+        guard state == .resisting, !patternSequence.isEmpty else { return }
+        if action == patternSequence[patternIndex] {
+            patternScore += 12 + patternIndex * 3
+            patternIndex += 1
+            if patternIndex >= patternSequence.count {
+                patternRound += 1
+                patternMessage = "Pattern complete. Next round is longer."
+                bestPatternScore = max(bestPatternScore, patternScore)
+                persistScores()
+                evaluateMissions()
+                refreshPatternSequence()
+            } else {
+                patternMessage = "Correct. Continue the chain."
             }
         } else {
-            signalScore = max(0, signalScore - 8)
-            signalIndex = 0
-            pulseLevel = min(1, pulseLevel + 0.14)
-            signalMessage = "順番が違います。最初から入力してください。"
+            patternScore = max(0, patternScore - 10)
+            patternIndex = 0
+            patternMessage = "Order missed. Restart this sequence."
         }
-        bestSignalScore = max(bestSignalScore, signalScore)
-        persistSignalStats()
+        bestPatternScore = max(bestPatternScore, patternScore)
+        persistScores()
     }
 
-    func pressForbiddenButton() {
-        guard state == .resisting else { return }
-        updateElapsed()
-        state = .failed
-        saveSession(succeeded: false)
-        tickTask?.cancel()
-        normalAudioTask?.cancel()
-        pressureEventTask?.cancel()
-        audioPlayer.stopOneShot()
-        audioPlayer.startPressedLoop()
+    func answerScenario(_ action: PatternAction) {
+        guard let card = activeScenario, state == .resisting else { return }
+        if action == card.answer {
+            solvedScenarioCount += 1
+            scenarioScore += card.reward
+            scenarioMessage = "Correct. \(action.title) was the clean response."
+        } else {
+            missedScenarioCount += 1
+            scenarioScore = max(0, scenarioScore - 4)
+            scenarioMessage = "Missed. Best response: \(card.answer.title)."
+        }
+        persistScenario()
+        evaluateMissions()
+        activeScenario = nextScenario(after: card)
     }
 
-    func finishWithoutPressing() {
-        guard state == .resisting else { return }
-        updateElapsed()
-        completeChallenge()
+    func completeMission(_ mission: Mission) {
+        completedMissionIDs.insert(mission.id)
+        persistMissions()
+    }
+
+    func saveCurrentRun() {
+        let score = totalScore
+        saveSession(modeName: "Arcade Mix", score: score, note: "focus \(focusScore), pattern \(patternScore), cards \(scenarioScore)")
+        evaluateMissions()
     }
 
     func resetProgress() {
-        sessions = []
+        focusScore = 0
+        patternScore = 0
+        scenarioScore = 0
+        bestFocusScore = 0
+        bestPatternScore = 0
+        solvedScenarioCount = 0
+        missedScenarioCount = 0
         completedMissionIDs = []
-        counteredEventIDs = []
-        bestEventStreak = 0
-        solvedReactionCount = 0
-        wrongReactionCount = 0
-        bestDefenseScore = 0
-        bestSignalScore = 0
+        sessions = []
+        persistScores()
+        persistScenario()
+        persistMissions()
         persistSessions()
-        persistCompletedMissions()
-        persistCounteredEvents()
-        persistReactionStats()
-        persistDefenseStats()
-        persistSignalStats()
         start()
     }
 
     func applyScreenshotPreset(_ preset: String) {
-        tickTask?.cancel()
-        normalAudioTask?.cancel()
-        pressureEventTask?.cancel()
-        audioPlayer.stopAll()
-
-        let sampleSessions = [
-            SessionRecord(id: UUID(), date: Date(), mode: .thirty, seconds: 30, succeeded: true, calmScore: 44, missionTitle: "30秒の壁"),
-            SessionRecord(id: UUID(), date: Date(), mode: .classic, seconds: 64, succeeded: true, calmScore: 57, missionTitle: "冷静キープ"),
-            SessionRecord(id: UUID(), date: Date(), mode: .chaos, seconds: 24, succeeded: false, calmScore: 18, missionTitle: "煽り強め入門")
+        state = .resisting
+        sessions = [
+            SessionRecord(id: UUID(), date: Date(), modeName: "Focus Grid", score: 184, note: "combo 11"),
+            SessionRecord(id: UUID(), date: Date(), modeName: "Pattern Relay", score: 156, note: "round 7"),
+            SessionRecord(id: UUID(), date: Date(), modeName: "Scenario Cards", score: 128, note: "12 correct")
         ]
-        sessions = sampleSessions
-        completedMissionIDs = Set(["first-10", "first-30", "calm-45", "chaos-45", "minute", "endurance-90", "quick-reset", "silent-40"])
-        counteredEventIDs = Set(["finger-close", "voice-bait", "red-flash", "heartbeat", "near-clear", "double-voice"])
-        solvedReactionCount = 18
-        wrongReactionCount = 3
-        defenseScore = 86
-        defenseCombo = 7
-        bestDefenseScore = 142
-        signalScore = 74
-        bestSignalScore = 128
-        signalRound = 6
-        signalIndex = 1
-        signalSequence = [.breathe, .count, .lookAway, .breathe]
-        signalMessage = "順番を覚えて、次の行動を選ぶ。"
-        defenseLives = 3
-        defenseRound = 9
-        defenseTiles = [
-            DefenseTile(id: 0, kind: .safe), DefenseTile(id: 1, kind: .trap), DefenseTile(id: 2, kind: .safe),
-            DefenseTile(id: 3, kind: .bonus), DefenseTile(id: 4, kind: .safe), DefenseTile(id: 5, kind: .trap),
-            DefenseTile(id: 6, kind: .safe), DefenseTile(id: 7, kind: .bonus), DefenseTile(id: 8, kind: .safe)
+        completedMissionIDs = Set(["focus-40", "focus-80", "combo-5", "pattern-40", "pattern-80", "scenario-5", "scenario-12", "total-150"])
+        focusScore = 92
+        focusCombo = 7
+        focusLives = 3
+        focusRound = 10
+        bestFocusScore = 184
+        patternScore = 74
+        patternRound = 6
+        patternIndex = 1
+        bestPatternScore = 156
+        patternSequence = [.scan, .count, .hold, .switchLane]
+        scenarioScore = 66
+        solvedScenarioCount = 12
+        missedScenarioCount = 2
+        activeScenario = scenarioCards.first { $0.id == "wide-board" } ?? scenarioCards.first
+        focusTiles = [
+            FocusTile(id: 0, kind: .target, label: "A1"),
+            FocusTile(id: 1, kind: .decoy, label: "B4"),
+            FocusTile(id: 2, kind: .bonus, label: "C2"),
+            FocusTile(id: 3, kind: .target, label: "A2"),
+            FocusTile(id: 4, kind: .decoy, label: "D1"),
+            FocusTile(id: 5, kind: .target, label: "A3"),
+            FocusTile(id: 6, kind: .bonus, label: "C3"),
+            FocusTile(id: 7, kind: .target, label: "A4"),
+            FocusTile(id: 8, kind: .decoy, label: "B2")
         ]
-        defenseMessage = "安全タイルを連続処理中。赤い罠は避ける。"
-        bestEventStreak = 5
-        activeMissionID = "first-30"
-        selectedMode = .thirty
-        activeReactionCard = reactionCards.first { $0.id == "red-pulse" } ?? reactionCards.first
-        activePressureEvent = pressureEvents.first { $0.id == "red-flash" }
-        reactionMessage = "正しい行動を選ぶとコンボが伸びます"
+        focusMessage = "Screenshot run: scan the grid and keep the match chain."
+        patternMessage = "Screenshot run: repeat the visible relay order."
+        scenarioMessage = "Screenshot run: choose the response that fits the situation."
 
-        switch preset {
-        case "missions":
-            state = .resisting
-            elapsedSeconds = 8
-            calmScore = 21
-            pulseLevel = 0.22
-            activeMissionID = "chaos-120"
-        case "actions":
-            state = .resisting
-            elapsedSeconds = 64
-            calmScore = 56
-            pulseLevel = 0.55
-            activeReactionCard = reactionCards.first { $0.id == "thumb-hover" } ?? reactionCards.first
-            activePressureEvent = pressureEvents.first { $0.id == "finger-close" }
-        case "failed":
+        if preset == "failed" {
             state = .failed
-            elapsedSeconds = 24
-            calmScore = 18
-            pulseLevel = 0.86
-        case "survived":
+            focusLives = 0
+            focusMessage = "Run ended after a decoy. Review and restart."
+        } else if preset == "survived" {
             state = .survived
-            elapsedSeconds = 180
-            calmScore = 91
-            pulseLevel = 0.18
-        default:
-            state = .resisting
-            elapsedSeconds = 18
-            calmScore = 24
-            pulseLevel = 0.42
+            saveCurrentRun()
         }
     }
 
-    private func completeChallenge() {
-        state = .survived
-        if let activeMission, elapsedSeconds >= activeMission.targetSeconds {
-            completedMissionIDs.insert(activeMission.id)
-            persistCompletedMissions()
+    private func refreshFocusBoard() {
+        let labels = ["A1", "A2", "A3", "A4", "B1", "B2", "C1", "C2", "D1", "E1"]
+        focusTiles = (0..<9).map { index in
+            let roll = Int.random(in: 0..<10)
+            let kind: FocusTileKind
+            if roll < 5 {
+                kind = .target
+            } else if roll < 8 {
+                kind = .decoy
+            } else {
+                kind = .bonus
+            }
+            return FocusTile(id: focusRound * 10 + index, kind: kind, label: labels.randomElement() ?? "A1")
         }
-        saveSession(succeeded: true)
-        tickTask?.cancel()
-        normalAudioTask?.cancel()
-        pressureEventTask?.cancel()
-        audioPlayer.stopAll()
+        if !focusTiles.contains(where: { $0.kind == .target }) {
+            focusTiles[0] = FocusTile(id: focusRound * 10, kind: .target, label: "A1")
+        }
     }
 
-    private func startClock() {
-        tickTask?.cancel()
-        tickTask = Task { [weak self] in
-            while !Task.isCancelled {
-                try? await Task.sleep(for: .seconds(0.25))
-                guard let self else { return }
-                self.updateElapsed()
-                if let target = self.currentTargetSeconds, self.elapsedSeconds >= target {
-                    self.completeChallenge()
-                    return
-                }
+    private func refreshPatternSequence() {
+        let length = min(8, 3 + patternRound / 2)
+        patternSequence = (0..<length).map { _ in PatternAction.allCases.randomElement() ?? .scan }
+        patternIndex = 0
+    }
+
+    private func nextScenario(after card: ScenarioCard) -> ScenarioCard? {
+        guard let index = scenarioCards.firstIndex(of: card) else { return scenarioCards.randomElement() }
+        return scenarioCards[(index + 1) % scenarioCards.count]
+    }
+
+    private func evaluateMissions() {
+        for mission in missions {
+            let complete: Bool
+            switch mission.id {
+            case "focus-40": complete = bestFocusScore >= 40
+            case "focus-80": complete = bestFocusScore >= 80
+            case "focus-120": complete = bestFocusScore >= 120
+            case "combo-5": complete = focusCombo >= 5
+            case "combo-10": complete = focusCombo >= 10
+            case "pattern-40": complete = bestPatternScore >= 40
+            case "pattern-80": complete = bestPatternScore >= 80
+            case "pattern-120": complete = bestPatternScore >= 120
+            case "round-4": complete = patternRound >= 4
+            case "round-8": complete = patternRound >= 8
+            case "scenario-5": complete = solvedScenarioCount >= 5
+            case "scenario-12": complete = solvedScenarioCount >= 12
+            case "scenario-24": complete = solvedScenarioCount >= 24
+            case "total-150": complete = totalScore >= 150 || sessions.contains { $0.score >= 150 }
+            case "total-300": complete = totalScore >= 300 || sessions.contains { $0.score >= 300 }
+            case "total-500": complete = totalScore >= 500 || sessions.contains { $0.score >= 500 }
+            case "no-miss-3": complete = solvedScenarioCount >= 3 && missedScenarioCount == 0
+            case "cards-10": complete = solvedScenarioCount + missedScenarioCount >= 10
+            case "daily-1": complete = dailyMissions.contains { completedMissionIDs.contains($0.id) }
+            case "daily-4": complete = dailyMissions.allSatisfy { completedMissionIDs.contains($0.id) }
+            case "records-3": complete = sessions.count >= 3
+            case "records-10": complete = sessions.count >= 10
+            case "best-200": complete = bestOverallScore >= 200
+            case "all-round": complete = focusScore > 0 && patternScore > 0 && solvedScenarioCount + missedScenarioCount > 0 && sessions.count > 0
+            default: complete = false
+            }
+            if complete {
+                completedMissionIDs.insert(mission.id)
             }
         }
+        persistMissions()
     }
 
-    private func startNormalAudioLoop() {
-        normalAudioTask?.cancel()
-        normalAudioTask = Task { [weak self] in
-            while !Task.isCancelled {
-                guard let self else { return }
-                let delay = self.nextNormalDelay()
-                try? await Task.sleep(for: .seconds(delay))
-                guard !Task.isCancelled else { return }
-                self.audioPlayer.playRandomNormalOrWarning(elapsedSeconds: self.elapsedSeconds)
-            }
-        }
-    }
-
-    private func startPressureEventLoop() {
-        pressureEventTask?.cancel()
-        pressureEventTask = Task { [weak self] in
-            while !Task.isCancelled {
-                guard let self else { return }
-                let baseDelay = self.selectedMode == .chaos ? 7.0 : 11.0
-                try? await Task.sleep(for: .seconds(baseDelay + Double.random(in: 0...5)))
-                guard !Task.isCancelled, self.state == .resisting else { return }
-                self.activePressureEvent = self.pressureEvents.randomElement()
-            }
-        }
-    }
-
-    private func nextReactionCard(after card: ReactionCard) -> ReactionCard? {
-        let candidates = reactionCards.filter { $0.id != card.id }
-        return candidates.randomElement() ?? reactionCards.randomElement()
-    }
-
-    private func updateElapsed() {
-        elapsedSeconds = max(0, Int(Date().timeIntervalSince(startedAt)))
-        calmActionCooldown = max(0, 6 - (elapsedSeconds - lastCalmActionSecond))
-        let scaled = Double(elapsedSeconds) * selectedMode.pressureScale
-        let calmReduction = Double(calmScore) * 3.0
-        pulseLevel = min(1, max(0, scaled - calmReduction) / 180.0)
-    }
-
-    private var currentTargetSeconds: Int? {
-        activeMission?.targetSeconds ?? selectedMode.targetSeconds
-    }
-
-    private func nextNormalDelay() -> Double {
-        let scale = selectedMode == .chaos ? 0.62 : 1.0
-        let range: ClosedRange<Double>
-        switch elapsedSeconds {
-        case 0..<30:
-            range = 8...14
-        case 30..<90:
-            range = 5...9
-        case 90..<180:
-            range = 3...6
-        default:
-            range = 1.6...3.4
-        }
-        return Double.random(in: range) * scale
-    }
-
-    private func saveSession(succeeded: Bool) {
-        let record = SessionRecord(
-            id: UUID(),
-            date: Date(),
-            mode: selectedMode,
-            seconds: elapsedSeconds,
-            succeeded: succeeded,
-            calmScore: calmScore,
-            missionTitle: activeMission?.title
-        )
-        sessions.insert(record, at: 0)
-        sessions = Array(sessions.prefix(30))
+    private func saveSession(modeName: String, score: Int, note: String) {
+        sessions.insert(SessionRecord(id: UUID(), date: Date(), modeName: modeName, score: score, note: note), at: 0)
+        sessions = Array(sessions.prefix(20))
         persistSessions()
     }
 
     private func loadProgress() {
-        if let rawMode = UserDefaults.standard.string(forKey: modeKey),
-           let mode = Mode(rawValue: rawMode) {
-            selectedMode = mode
+        bestFocusScore = UserDefaults.standard.integer(forKey: focusKey)
+        bestPatternScore = UserDefaults.standard.integer(forKey: patternKey)
+        scenarioScore = UserDefaults.standard.integer(forKey: scenarioKey)
+        solvedScenarioCount = UserDefaults.standard.integer(forKey: solvedKey)
+        missedScenarioCount = UserDefaults.standard.integer(forKey: missedKey)
+        if let missionArray = UserDefaults.standard.array(forKey: missionsKey) as? [String] {
+            completedMissionIDs = Set(missionArray)
         }
-        if let completed = UserDefaults.standard.array(forKey: completedMissionsKey) as? [String] {
-            completedMissionIDs = Set(completed)
+        if let data = UserDefaults.standard.data(forKey: sessionsKey),
+           let decoded = try? JSONDecoder().decode([SessionRecord].self, from: data) {
+            sessions = decoded
         }
-        if let countered = UserDefaults.standard.array(forKey: counteredEventsKey) as? [String] {
-            counteredEventIDs = Set(countered)
-        }
-        bestEventStreak = UserDefaults.standard.integer(forKey: bestEventStreakKey)
-        solvedReactionCount = UserDefaults.standard.integer(forKey: solvedReactionCountKey)
-        wrongReactionCount = UserDefaults.standard.integer(forKey: wrongReactionCountKey)
-        bestDefenseScore = UserDefaults.standard.integer(forKey: bestDefenseScoreKey)
-        bestSignalScore = UserDefaults.standard.integer(forKey: bestSignalScoreKey)
-        guard let data = UserDefaults.standard.data(forKey: sessionsKey),
-              let decoded = try? JSONDecoder().decode([SessionRecord].self, from: data) else {
-            return
-        }
-        sessions = decoded
+    }
+
+    private func persistScores() {
+        UserDefaults.standard.set(bestFocusScore, forKey: focusKey)
+        UserDefaults.standard.set(bestPatternScore, forKey: patternKey)
+    }
+
+    private func persistScenario() {
+        UserDefaults.standard.set(scenarioScore, forKey: scenarioKey)
+        UserDefaults.standard.set(solvedScenarioCount, forKey: solvedKey)
+        UserDefaults.standard.set(missedScenarioCount, forKey: missedKey)
+    }
+
+    private func persistMissions() {
+        UserDefaults.standard.set(Array(completedMissionIDs), forKey: missionsKey)
     }
 
     private func persistSessions() {
         if let data = try? JSONEncoder().encode(sessions) {
             UserDefaults.standard.set(data, forKey: sessionsKey)
         }
-    }
-
-    private func persistCompletedMissions() {
-        UserDefaults.standard.set(Array(completedMissionIDs), forKey: completedMissionsKey)
-    }
-
-    private func persistCounteredEvents() {
-        UserDefaults.standard.set(Array(counteredEventIDs), forKey: counteredEventsKey)
-        UserDefaults.standard.set(bestEventStreak, forKey: bestEventStreakKey)
-    }
-
-    private func persistReactionStats() {
-        UserDefaults.standard.set(solvedReactionCount, forKey: solvedReactionCountKey)
-        UserDefaults.standard.set(wrongReactionCount, forKey: wrongReactionCountKey)
-        UserDefaults.standard.set(bestEventStreak, forKey: bestEventStreakKey)
-    }
-
-    private func persistDefenseStats() {
-        UserDefaults.standard.set(bestDefenseScore, forKey: bestDefenseScoreKey)
-    }
-
-    private func persistSignalStats() {
-        UserDefaults.standard.set(bestSignalScore, forKey: bestSignalScoreKey)
-    }
-
-    private func refreshDefenseBoard() {
-        let trapCount = min(4, 1 + defenseRound / 4)
-        let bonusIndex = Int.random(in: 0..<9)
-        var trapIndices = Set<Int>()
-        while trapIndices.count < trapCount {
-            let index = Int.random(in: 0..<9)
-            if index != bonusIndex {
-                trapIndices.insert(index)
-            }
-        }
-        defenseTiles = (0..<9).map { index in
-            let kind: DefenseTileKind
-            if index == bonusIndex {
-                kind = .bonus
-            } else if trapIndices.contains(index) {
-                kind = .trap
-            } else {
-                kind = .safe
-            }
-            return DefenseTile(id: defenseRound * 10 + index, kind: kind)
-        }
-    }
-
-    private func refreshSignalSequence() {
-        let length = min(7, 3 + signalRound / 2)
-        signalSequence = (0..<length).map { _ in CalmAction.allCases.randomElement() ?? .breathe }
-        signalIndex = 0
-    }
-
-    func formatted(seconds: Int) -> String {
-        let minutes = seconds / 60
-        let seconds = seconds % 60
-        return String(format: "%02d:%02d", minutes, seconds)
     }
 }

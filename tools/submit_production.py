@@ -25,34 +25,30 @@ SCREENSHOT_GROUPS = [
 
 META = {
     "ja": {
-        "description": """押すなと言われるほど、押したくなる。
+        "description": """Impulse Labは、短時間で遊べる反射・記憶・判断のミニゲーム集です。
 
-「絶対押すなよ」は、赤いボタンをテーマにしたアーケードゲーム集です。
+Focus Gridでは、MATCHタイルを見つけてコンボを伸ばします。Pattern Relayでは、表示された行動順を覚えて同じ順番で入力します。Scenario Cardsでは、状況文を読んで最適な対応を選びます。
 
-赤い罠を避けて安全タイルを処理する「ボタン防衛」、表示順を覚えて同じ行動を入力する「シグナル訓練」、状況を読んで3択で答える「誘惑ジャッジ」、赤いボタンに耐えるチャレンジ任務を収録。アーケード、任務、カード、記録の4タブで遊べます。
+4つのタブに、4種類のプレイモード、24本のミッション、28枚のシナリオカード、6本の練習メモ、24個のバッジ、デイリー目標、スコア記録、最近のプレイ履歴を収録しています。
 
-20本のチャレンジ任務、24枚の誘惑カード、16種類の緊急イベント、攻略メモ、日替わり修行も用意しました。ベストタイム、防衛ハイスコア、記憶スコア、判断問題の正解数、勝利数、冷静ポイント、コンボ、称号、20個の実績、任務の達成状況を保存します。
-
-短時間で遊ぶ反射ゲーム、記憶ゲーム、判断ゲームとしてどうぞ。""",
-        "keywords": "押すな,赤いボタン,ゲーム,暇つぶし,音声,タイマー,実績,記録,自制心",
-        "whatsNew": "アーケード、任務、カード、記録の4タブ構成に変更し、記憶順に行動を入力する新モード「シグナル訓練」を追加しました。",
-        "promotionalText": "赤ボタン・アーケード。反射、記憶、判断、耐久を遊ぼう。",
+すべての進行状況は端末内に保存されます。ログインは不要です。""",
+        "keywords": "反射,記憶,判断,ミニゲーム,パズル,集中,スコア,実績,デイリー,暇つぶし",
+        "whatsNew": "アプリのコンセプトを反射・記憶・判断のミニゲーム集に刷新しました。Focus Grid、Pattern Relay、Scenario Cards、Daily Setを追加しています。",
+        "promotionalText": "反射、記憶、判断を短時間で遊べるミニゲーム集。",
         "marketingUrl": "https://snarfnet.github.io/",
         "supportUrl": "https://snarfnet.github.io/",
     },
     "en-US": {
-        "description": """The more you are told not to press it, the more tempting it gets.
+        "description": """Impulse Lab is a quick arcade collection for reflex, memory, and judgment practice.
 
-Don't Press It is a red-button arcade collection built for quick play.
+Play Focus Grid to find matching tiles and build combos. Play Pattern Relay to memorize and repeat action sequences. Play Scenario Cards to read short situations and choose the best response.
 
-Play Button Defense, an active tile game where you tap safe tiles and avoid red traps. Play Signal Training, a memory game where you repeat the shown action order. Answer temptation judgment cards, clear staged survival missions, and switch between Arcade, Missions, Cards, and Records tabs.
+The app includes four sections, four play modes, 24 goals, 28 scenario cards, six practice notes, 24 badges, a daily goal set, score tracking, and recent run history.
 
-The app includes 20 missions, 24 temptation cards, 16 pressure events, daily drills, strategy notes, four survival modes, best-time tracking, defense high score, signal high score, judgment answers, combo streaks, rank titles, 20 achievements, and mission progress.
-
-Use it for quick reflex, memory, judgment, and endurance rounds.""",
-        "keywords": "button,red button,game,challenge,voice,timer,achievements,records,self control",
-        "whatsNew": "Rebuilt the app around Arcade, Missions, Cards, and Records tabs, and added Signal Training, a memory game where players repeat the shown action order.",
-        "promotionalText": "A red-button arcade for reflex, memory, judgment, and endurance rounds.",
+Progress is saved on device. No login is required.""",
+        "keywords": "reflex,memory,judgment,arcade,puzzle,focus,score,achievements,daily,quick game",
+        "whatsNew": "Rebuilt the app as a reflex, memory, and judgment arcade with Focus Grid, Pattern Relay, Scenario Cards, and Daily Set.",
+        "promotionalText": "A quick arcade for reflex, memory, and judgment runs.",
         "marketingUrl": "https://snarfnet.github.io/",
         "supportUrl": "https://snarfnet.github.io/",
     },
@@ -218,8 +214,9 @@ def update_app_info_localizations(app_info_id):
     for loc in body.get("data", []):
         locale = loc["attributes"].get("locale")
         attrs = {
+            "name": "Impulse Lab",
             "privacyPolicyUrl": "https://snarfnet.github.io/privacy.html",
-            "subtitle": "押してはいけない赤いボタン" if locale == "ja" else "A forbidden red button",
+            "subtitle": "反射と判断のミニゲーム集" if locale == "ja" else "Reflex and judgment arcade",
         }
         response = api("PATCH", f"/appInfoLocalizations/{loc['id']}", json={
             "data": {"type": "appInfoLocalizations", "id": loc["id"], "attributes": attrs}
@@ -268,12 +265,12 @@ def ensure_review_detail(version_id):
         "demoAccountRequired": False,
         "notes": (
             "No login is required. The app does not call any external API. "
-            "The app has been rebuilt as a red-button arcade with four main tabs: Arcade, Missions, Cards, and Records. "
-            "Arcade now includes Button Defense, an active tile game where players tap safe tiles, avoid red traps, build combos, keep lives, and save a high score; "
-            "and Signal Training, a memory game where players repeat the shown order using breathe, look-away, and count actions. "
-            "It also includes 20 staged challenge missions, 24 three-choice temptation judgment cards, 16 pressure events, daily drills, strategy notes, "
-            "matching calm actions, calm points, event counters, combo streaks, mission completion tracking, four challenge modes, best-time tracking, "
-            "20 achievements, recent session history, rank titles, and bundled voice reactions played with AVAudioPlayer. "
+            "This build changes the app concept away from the previous minimal single-purpose experience. "
+            "The app is now Impulse Lab, a reflex, memory, and judgment arcade with four main sections: Play, Goals, Cards, and Records. "
+            "Play includes Focus Grid, an active tile game where players find MATCH tiles, avoid decoys, build combos, keep lives, and save high scores; "
+            "and Pattern Relay, a memory game where players repeat shown action sequences. "
+            "Cards includes 28 scenario cards where players read a situation and choose the best response. "
+            "Goals includes 24 missions plus a rotating daily set. Records includes content counts, 24 badges, score tracking, and recent run history. "
             "All screenshots are captured from the running iOS app on simulators for the submitted device sizes. "
             "This build requests App Tracking Transparency permission shortly after first launch. "
             "Google Mobile Ads SDK is started only after the ATT flow completes or if the user has already made a tracking choice."
