@@ -8,6 +8,23 @@ DERIVED="$ROOT/build/simulator"
 OUT="$ROOT/MarketingAssets/Screenshots"
 BUNDLE_ID="com.tokyonasu.zettaiosunayo"
 
+run_with_timeout() {
+  local seconds="$1"
+  shift
+  python3 - "$seconds" "$@" <<'PY'
+import subprocess
+import sys
+
+seconds = int(sys.argv[1])
+cmd = sys.argv[2:]
+try:
+    raise SystemExit(subprocess.run(cmd, timeout=seconds).returncode)
+except subprocess.TimeoutExpired:
+    print(f"Timed out after {seconds}s: {' '.join(cmd)}", file=sys.stderr)
+    raise SystemExit(124)
+PY
+}
+
 pick_device() {
   python3 - "$@" <<'PY'
 import json, subprocess, sys
@@ -34,24 +51,27 @@ PY
 
 boot_device() {
   local udid="$1"
+  echo "Booting simulator $udid"
   xcrun simctl shutdown all >/dev/null 2>&1 || true
-  xcrun simctl boot "$udid" >/dev/null 2>&1 || true
-  xcrun simctl bootstatus "$udid" -b
+  run_with_timeout 120 xcrun simctl boot "$udid" >/dev/null 2>&1 || true
+  run_with_timeout 180 xcrun simctl bootstatus "$udid" -b
 }
 
 capture_set() {
   local folder="$1"
   local udid="$2"
+  echo "Capturing $folder screenshots"
   mkdir -p "$OUT/$folder"
   rm -f "$OUT/$folder"/*.png
-  xcrun simctl install "$udid" "$APP_PATH"
+  run_with_timeout 180 xcrun simctl install "$udid" "$APP_PATH"
   local presets=(home missions actions failed survived)
   local names=(01-home 02-missions 03-actions 04-failed 05-survived)
   for i in "${!presets[@]}"; do
+    echo "  ${names[$i]}"
     xcrun simctl terminate "$udid" "$BUNDLE_ID" >/dev/null 2>&1 || true
-    xcrun simctl launch "$udid" "$BUNDLE_ID" --screenshot-mode "--screenshot-preset=${presets[$i]}" >/dev/null
+    run_with_timeout 60 xcrun simctl launch "$udid" "$BUNDLE_ID" --screenshot-mode "--screenshot-preset=${presets[$i]}" >/dev/null
     sleep 2
-    xcrun simctl io "$udid" screenshot "$OUT/$folder/${names[$i]}.png"
+    run_with_timeout 60 xcrun simctl io "$udid" screenshot "$OUT/$folder/${names[$i]}.png"
   done
 }
 
@@ -85,7 +105,7 @@ PY
 }
 
 rm -rf "$DERIVED"
-xcodebuild build \
+run_with_timeout 600 xcodebuild build \
   -project ZettaiOsunaYo.xcodeproj \
   -scheme ZettaiOsunaYo \
   -configuration Debug \
